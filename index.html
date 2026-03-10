@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PH Therapy Navigator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <main class="layout">
+    <header class="hero">
+      <p class="eyebrow">Clinical Decision Support Prototype</p>
+      <h1>PH Therapy Navigator</h1>
+      <p class="subtitle">
+        Structured support for when to initiate or escalate pulmonary hypertension therapy,
+        with score-driven recommendations and medication-level safety context.
+      </p>
+    </header>
+
+    <section class="panel input-panel">
+      <h2>Patient Inputs</h2>
+      <p class="panel-note">Enter available data. The tool computes hemodynamics and risk strata, then proposes therapy options.</p>
+
+      <div id="form-message" class="form-message"></div>
+
+      <form id="patient-form" class="form-grid">
+        <label>
+          Assessment moment
+          <select name="assessmentStage" required>
+            <option value="initial">Initial therapy decision</option>
+            <option value="follow_up">Follow-up escalation decision</option>
+          </select>
+        </label>
+
+        <label>
+          WHO clinical group
+          <select name="whoGroup" required>
+            <option value="1">Group 1 (PAH)</option>
+            <option value="2">Group 2 (PH-LHD)</option>
+            <option value="3">Group 3 (lung disease/hypoxia)</option>
+            <option value="4">Group 4 (CTEPH/CTEPD)</option>
+            <option value="5">Group 5 (multifactorial/other)</option>
+          </select>
+        </label>
+
+        <label>
+          mPAP (mmHg)
+          <input type="number" name="mPAP" min="0" step="0.1" required />
+        </label>
+
+        <label>
+          PAWP (mmHg)
+          <input type="number" name="PAWP" min="0" step="0.1" required />
+        </label>
+
+        <label>
+          PVR (WU)
+          <input type="number" name="PVR" min="0" step="0.1" required />
+        </label>
+
+        <label>
+          WHO functional class
+          <select name="whoFc" required>
+            <option value="I">I</option>
+            <option value="II">II</option>
+            <option value="III">III</option>
+            <option value="IV">IV</option>
+          </select>
+          <small class="input-help">Class I: no limitation. Class II: slight limitation. Class III: marked limitation. Class IV: symptoms at rest or with minimal activity.</small>
+        </label>
+
+        <label>
+          6MWD (meters)
+          <input type="number" name="walkDistance" min="0" step="1" />
+        </label>
+
+        <label>
+          BNP (pg/mL)
+          <input type="number" name="bnp" min="0" step="1" />
+          <small class="input-help">Usual non-acute reference is often &lt;100 pg/mL (lab-dependent).</small>
+        </label>
+
+        <label>
+          NT-proBNP (ng/L)
+          <input type="number" name="ntProbnp" min="0" step="1" />
+          <small class="input-help">Usual non-acute reference is often &lt;125 ng/L (&lt;75 years) or &lt;450 ng/L (>=75 years), lab-dependent.</small>
+        </label>
+
+        <label>
+          Systolic BP (mmHg)
+          <input type="number" name="systolicBp" min="0" step="1" />
+        </label>
+
+        <label>
+          Platelets (x10^3/uL)
+          <input type="number" name="platelets" min="0" max="1000" step="1" />
+          <small class="input-help">Enter 0-1000. Example: 250 means 250,000/mm3.</small>
+        </label>
+
+        <fieldset class="modifier-group full-span" id="risk-score-inputs">
+          <legend>Risk Score Inputs (WHO Group 1 only)</legend>
+          <p class="modifier-intro">Select one score strategy. Available options change by assessment stage.</p>
+
+          <label class="full-span">
+            Score strategy
+            <select name="riskModel" id="risk-model"></select>
+            <small class="input-help">Initial: REVEAL 2.0. Follow-up: REVEAL Lite 2, COMPERA 2.0 4-risk strata, or French noninvasive criteria.</small>
+          </label>
+
+          <div class="modifier-grid">
+            <label class="risk-model-field" data-models="reveal20_initial,reveal_lite2_followup">
+              Age (years)
+              <input type="number" name="ageYears" min="18" max="120" step="1" />
+            </label>
+
+            <label class="risk-model-field" data-models="reveal20_initial,reveal_lite2_followup">
+              Sex at birth
+              <select name="sexAtBirth">
+                <option value="">Not entered</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+              </select>
+            </label>
+
+            <label class="risk-model-field" data-models="reveal20_initial,reveal_lite2_followup">
+              Heart rate (bpm)
+              <input type="number" name="heartRate" min="20" max="240" step="1" />
+            </label>
+
+            <label class="risk-model-field" data-models="reveal20_initial,reveal_lite2_followup">
+              eGFR (mL/min/1.73m2)
+              <input type="number" name="egfr" min="0" max="200" step="1" />
+            </label>
+
+            <label class="risk-model-field" data-models="reveal20_initial">
+              PAH subgroup (for WHO Group 1)
+              <select name="pahSubgroup">
+                <option value="">Not entered</option>
+                <option value="other">Other/idiopathic/drug-associated</option>
+                <option value="ctd">Connective tissue disease-associated</option>
+                <option value="heritable">Heritable PAH</option>
+                <option value="poph">Portopulmonary hypertension</option>
+              </select>
+            </label>
+
+            <label class="risk-model-field" data-models="reveal20_initial">
+              DLCO (% predicted)
+              <input type="number" name="dlcoPercentPred" min="0" max="150" step="1" />
+            </label>
+
+            <label class="risk-model-field" data-models="reveal20_initial">
+              Mean right atrial pressure (mRAP/RAP, mmHg)
+              <input type="number" name="mrap" min="0" max="40" step="1" />
+            </label>
+
+            <label class="modifier-item risk-model-field" data-models="reveal20_initial">
+              <input type="checkbox" name="recentHospitalization" />
+              <span>
+                <strong>All-cause hospitalization in prior 6 months</strong>
+                <small>REVEAL 2.0 component.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item risk-model-field" data-models="reveal20_initial">
+              <input type="checkbox" name="pericardialEffusion" />
+              <span>
+                <strong>Pericardial effusion on echocardiogram</strong>
+                <small>REVEAL 2.0 component.</small>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <label>
+          Hepatic impairment
+          <select name="hepaticImpairment">
+            <option value="none">None known</option>
+            <option value="mild">Mild (Child-Pugh A)</option>
+            <option value="moderate">Moderate (Child-Pugh B)</option>
+            <option value="severe">Severe (Child-Pugh C)</option>
+          </select>
+        </label>
+
+        <label>
+          Renal status
+          <select name="renalStatus">
+            <option value="normal">Normal or mild (eGFR >=60 mL/min/1.73m2)</option>
+            <option value="moderate">Moderate (eGFR 30-59)</option>
+            <option value="severe">Severe (eGFR &lt;30 or dialysis)</option>
+          </select>
+          <small class="input-help">Used for broad medication safety flags. Auto-filled from eGFR in REVEAL models: >=60 normal/mild, 30-59 moderate, &lt;30 severe. Final dose decisions remain drug-specific.</small>
+        </label>
+
+        <fieldset class="modifier-group full-span">
+          <legend>Phenotype Modifiers</legend>
+          <p class="modifier-intro">Use these to adjust pathway selection when phenotype is atypical or condition-specific.</p>
+          <div class="modifier-grid">
+            <label class="modifier-item">
+              <input type="checkbox" name="cardiopulmonaryComorbidities" />
+              <span>
+                <strong>Major cardiopulmonary comorbidity phenotype</strong>
+                <small>Typical scenario: older/mixed phenotype with significant cardiac or lung comorbidity where monotherapy-first escalation is often safer.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="vasoreactivityEligible" />
+              <span>
+                <strong>Vasoreactivity testing indicated phenotype</strong>
+                <small>Use for IPAH/HPAH/drug-associated PAH scenarios where acute vasoreactivity testing is guideline-relevant.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="vasoreactivityPositive" />
+              <span>
+                <strong>Positive vasoreactivity test</strong>
+                <small>Use only if a formal vasoreactivity test was positive; this opens the high-dose CCB branch.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="ildAssociated" />
+              <span>
+                <strong>PH associated with ILD phenotype</strong>
+                <small>Enables the PH-ILD targeted pathway (for example inhaled treprostinil consideration).</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="severeIldPh" />
+              <span>
+                <strong>Severe ILD-PH phenotype</strong>
+                <small>Use with ILD-associated PH when severe disease is present; allows optional PH-center PDE5 consideration.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="rightHeartFailureSigns" />
+              <span>
+                <strong>Signs of right-heart failure</strong>
+                <small>Examples: worsening edema, ascites, elevated JVP, hepatomegaly, or decompensated RV failure features.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="volumeOverload" />
+              <span>
+                <strong>Clinical volume overload / congestion</strong>
+                <small>Triggers decongestion guidance (diuresis) with electrolyte/renal monitoring recommendations.</small>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="modifier-group full-span">
+          <legend>Safety and Interaction Modifiers</legend>
+          <p class="modifier-intro">These directly affect contraindication checks and medication filtering.</p>
+          <div class="modifier-grid">
+            <label class="modifier-item">
+              <input type="checkbox" name="pregnantOrTrying" />
+              <span>
+                <strong>Pregnant or trying to conceive</strong>
+                <small>Triggers pregnancy safety guardrails, including ERA/riociguat restrictions.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="onNitrates" />
+              <span>
+                <strong>Current nitrates or NO donor therapy</strong>
+                <small>Flags contraindications with PDE5 inhibitors and riociguat (for example nitroglycerin, isosorbide dinitrate, inhaled nitric oxide).</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="strongCyp2c8Inhibitor" />
+              <span>
+                <strong>On strong CYP2C8 inhibitor (for example gemfibrozil)</strong>
+                <small>Used for interaction hard-stops, especially for selexipag.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="onClopidogrel" />
+              <span>
+                <strong>On clopidogrel</strong>
+                <small>Adds selexipag dose-frequency caution in the validation step.</small>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="primary-btn">Generate Recommendation</button>
+      </form>
+    </section>
+
+    <section class="panel" id="results-panel">
+      <h2>Decision Output</h2>
+      <div id="decision-summary" class="result-block muted">No analysis yet.</div>
+      <div id="alerts" class="result-block"></div>
+      <div id="action-items" class="result-block"></div>
+      <div id="recommendation-rationale" class="result-block"></div>
+
+      <div id="medication-selector" class="result-block"></div>
+      <div id="regimen-validation" class="result-block"></div>
+      <div id="medication-details" class="result-block"></div>
+    </section>
+
+    <section class="panel guardrails">
+      <h2>Embedded Guardrails</h2>
+      <ul>
+        <li>Blocks or flags guideline-discordant PAH therapy use in Group 2 and most Group 3 scenarios.</li>
+        <li>Flags high-risk contraindications (for example riociguat + PDE5 inhibitor; nitrates with PDE5/riociguat).</li>
+        <li>Highlights pregnancy-related restrictions for ERAs and riociguat.</li>
+        <li>Surfaces dose, route, titration, monitoring, and organ-function considerations for selected drugs.</li>
+      </ul>
+      <p class="disclaimer">
+        For clinician decision support only. Final prescribing decisions must use current product labeling,
+        local protocol, and specialist judgment.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    window.__PH_APP_READY = false;
+  </script>
+  <script defer src="app.js"></script>
+  <script>
+    window.addEventListener("load", function () {
+      if (!window.__PH_APP_READY) {
+        var message = document.getElementById("form-message");
+        if (message) {
+          message.classList.add("show");
+          message.textContent = "This browser could not run the app script. Use an updated Safari/Chrome version or open a hosted web link instead of local file preview.";
+        }
+      }
+    });
+  </script>
+</body>
+</html>
