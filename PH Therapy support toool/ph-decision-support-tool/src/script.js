@@ -20,23 +20,6 @@ if (!String.prototype.includes) {
   };
 }
 
-if (typeof Element !== "undefined" && !Element.prototype.matches) {
-  Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
-}
-
-if (typeof Element !== "undefined" && !Element.prototype.closest) {
-  Element.prototype.closest = function closest(selector) {
-    let node = this;
-    while (node) {
-      if (node.matches && node.matches(selector)) {
-        return node;
-      }
-      node = node.parentElement;
-    }
-    return null;
-  };
-}
-
 var DRUGS = {
   bosentan: {
     id: "bosentan",
@@ -273,63 +256,6 @@ var CLASS_LABELS = {
   ccb: "Calcium channel blocker pathway"
 };
 
-var CLINICAL_POLICY = {
-  guidelineVersion: "FDA label through 2025-12 + ESC/ERS-aligned risk workflow + WSPH context",
-  lastUpdated: "April 12, 2026",
-  sotaterceptPlacementMode: "early_add_on",
-  riskModelDefaults: {
-    initial: "reveal20_initial",
-    follow_up: "compera20_followup"
-  }
-};
-
-var RISK_STRATA_CONFIG = {
-  reveal20_initial: [
-    { tier: "low", title: "Low", note: "Initial low-risk profile.", meta: "REVEAL <=6" },
-    { tier: "intermediate", title: "Intermediate", note: "Needs close treatment planning and reassessment.", meta: "REVEAL 7-8" },
-    { tier: "high", title: "High", note: "Aggressive therapy and transplant-oriented planning.", meta: "REVEAL >=9" }
-  ],
-  escers_simplified_initial: [
-    { tier: "low", title: "Low", note: "Initial low-risk estimate.", meta: "Mean <=1.5" },
-    { tier: "intermediate", title: "Intermediate", note: "Escalation often needed if low risk is not reached.", meta: "Mean 1.6-2.5" },
-    { tier: "high", title: "High", note: "High-risk estimate requiring urgent intensification.", meta: "Mean >2.5" }
-  ],
-  reveal_lite2_followup: [
-    { tier: "low", title: "Low", note: "Goal state at follow-up.", meta: "REVEAL Lite 2 <=5" },
-    { tier: "intermediate", title: "Intermediate", note: "Low risk not yet achieved.", meta: "REVEAL Lite 2 6-7" },
-    { tier: "high", title: "High", note: "Urgent escalation and referral planning.", meta: "REVEAL Lite 2 >=8" }
-  ],
-  compera20_followup: [
-    { tier: "low", title: "Low", note: "Goal state at follow-up.", meta: "Mean <=1.5" },
-    { tier: "intermediate_low", title: "Intermediate-Low", note: "Escalation usually needed if low risk is not reached.", meta: "Mean 1.6-2.5" },
-    { tier: "intermediate_high", title: "Intermediate-High", note: "Higher-intensity escalation and referral planning.", meta: "Mean 2.6-3.5" },
-    { tier: "high", title: "High", note: "Urgent aggressive therapy / transplant-oriented care.", meta: "Mean >3.5" }
-  ],
-  french_noninvasive_followup: [
-    { tier: "low", title: "Low", note: "All 3 low-risk criteria met.", meta: "3 of 3 criteria" },
-    { tier: "intermediate", title: "Intermediate", note: "Low risk not yet secured.", meta: "2 of 3 criteria" },
-    { tier: "high", title: "High", note: "Substantial residual risk.", meta: "0-1 of 3 criteria" }
-  ]
-};
-
-var FOLLOW_UP_REGIMEN_DRUG_IDS = [
-  "ambrisentan",
-  "bosentan",
-  "ccb_vasoreactive",
-  "epoprostenol_iv",
-  "iloprost",
-  "macitentan",
-  "riociguat",
-  "selexipag",
-  "sildenafil",
-  "sotatercept",
-  "tadalafil",
-  "treprostinil_dpi",
-  "treprostinil_inhaled",
-  "treprostinil_oral",
-  "treprostinil_sciv"
-];
-
 function getDrugsByClass(classId) {
   return Object.values(DRUGS).filter((drug) => drug.classId === classId);
 }
@@ -342,21 +268,10 @@ function toNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function toNullableBoolean(value) {
-  if (value === "yes") {
-    return true;
-  }
-  if (value === "no") {
-    return false;
-  }
-  return null;
-}
-
 function parseInput(formData) {
   return {
     assessmentStage: formData.get("assessmentStage"),
     riskModel: formData.get("riskModel"),
-    sotaterceptPlacementMode: formData.get("sotaterceptPlacementMode") || CLINICAL_POLICY.sotaterceptPlacementMode,
     whoGroup: formData.get("whoGroup"),
     mPAP: toNumber(formData.get("mPAP")),
     PAWP: toNumber(formData.get("PAWP")),
@@ -366,21 +281,16 @@ function parseInput(formData) {
     bnp: toNumber(formData.get("bnp")),
     ntProbnp: toNumber(formData.get("ntProbnp")),
     systolicBp: toNumber(formData.get("systolicBp")),
-    systolicBpCategory: formData.get("systolicBpCategory"),
     heartRate: toNumber(formData.get("heartRate")),
-    heartRateCategory: formData.get("heartRateCategory"),
-    maleOver60: formData.get("maleOver60") === "yes",
+    ageYears: toNumber(formData.get("ageYears")),
+    sexAtBirth: formData.get("sexAtBirth"),
     egfr: toNumber(formData.get("egfr")),
     pahSubgroup: formData.get("pahSubgroup"),
     dlcoPercentPred: toNumber(formData.get("dlcoPercentPred")),
     mrap: toNumber(formData.get("mrap")),
     platelets: toNumber(formData.get("platelets")),
-    walkDistanceCategory: formData.get("walkDistanceCategory"),
-    bnpCategory: formData.get("bnpCategory"),
-    ntProbnpCategory: formData.get("ntProbnpCategory"),
-    currentRegimenDrugIds: formData.getAll("currentRegimenDrugIds").filter((id) => id && DRUGS[id]),
-    recentHospitalization: toNullableBoolean(formData.get("recentHospitalization")),
-    pericardialEffusion: toNullableBoolean(formData.get("pericardialEffusion")),
+    recentHospitalization: formData.get("recentHospitalization") === "on",
+    pericardialEffusion: formData.get("pericardialEffusion") === "on",
     cardiopulmonaryComorbidities: formData.get("cardiopulmonaryComorbidities") === "on",
     vasoreactivityEligible: formData.get("vasoreactivityEligible") === "on",
     vasoreactivityPositive: formData.get("vasoreactivityPositive") === "on",
@@ -568,34 +478,21 @@ function getRevealBiomarkerPoints(input) {
   return Math.max.apply(null, points);
 }
 
-function classifyThreeStrataRiskFromMean(meanScore) {
-  if (meanScore === null) {
-    return "unknown";
-  }
-  if (meanScore <= 1.5) {
-    return "low";
-  }
-  if (meanScore <= 2.5) {
-    return "intermediate";
-  }
-  return "high";
-}
-
 function getAllowedRiskModels(input) {
   if (input.whoGroup !== "1") {
     return [];
   }
   if (input.assessmentStage === "initial") {
-    return ["reveal20_initial", "escers_simplified_initial"];
+    return ["reveal20_initial"];
   }
   return ["reveal_lite2_followup", "compera20_followup", "french_noninvasive_followup"];
 }
 
 function getDefaultRiskModel(input) {
   if (input.assessmentStage === "initial") {
-    return CLINICAL_POLICY.riskModelDefaults.initial;
+    return "reveal20_initial";
   }
-  return CLINICAL_POLICY.riskModelDefaults.follow_up;
+  return "compera20_followup";
 }
 
 function classifyComperaFollowRiskFromMean(meanScore) {
@@ -634,55 +531,6 @@ function toCell(value) {
   return value === null || value === undefined ? "--" : value;
 }
 
-function computeEscErsSimplifiedInitial(input) {
-  const componentScores = {
-    whoFc: scoreFromThresholds(input.whoFc, [
-      { check: (v) => v === "I" || v === "II", score: 1 },
-      { check: (v) => v === "III", score: 2 },
-      { check: (v) => v === "IV", score: 3 }
-    ]),
-    sixMwd: scoreFromThresholds(input.walkDistance, [
-      { check: (v) => v > 440, score: 1 },
-      { check: (v) => v >= 165, score: 2 },
-      { check: (v) => v < 165, score: 3 }
-    ]),
-    biomarker: getBiomarkerScore3Strata(input)
-  };
-
-  const meanScore = calculateMeanScore(componentScores);
-  const label = classifyThreeStrataRiskFromMean(meanScore.mean);
-
-  return {
-    modelId: "escers_simplified_initial",
-    modelName: "ESC/ERS Simplified 3-Variable Baseline",
-    label,
-    pathwayLabel: label,
-    score: meanScore.mean,
-    variablesUsed: meanScore.used,
-    limitedData: meanScore.used < 2,
-    riskTable: {
-      columns: [
-        "Model",
-        "Risk Tier",
-        "Mean Score",
-        "Variables Used",
-        "WHO-FC",
-        "6MWD",
-        "BNP/NT-proBNP"
-      ],
-      rows: [[
-        "ESC/ERS Simplified",
-        label,
-        meanScore.mean === null ? "--" : Math.round(meanScore.mean),
-        `${meanScore.used}/3`,
-        toCell(componentScores.whoFc),
-        toCell(componentScores.sixMwd),
-        toCell(componentScores.biomarker)
-      ]]
-    }
-  };
-}
-
 function computeReveal20Initial(input) {
   let score = 6;
   let variablesUsed = 0;
@@ -693,10 +541,10 @@ function computeReveal20Initial(input) {
     whoFc: null,
     systolicBp: null,
     heartRate: null,
-    hospitalization: null,
+    hospitalization: 0,
     sixMwd: null,
     biomarker: null,
-    pericardialEffusion: null,
+    pericardialEffusion: 0,
     dlco: null,
     mrap: null,
     pvr: null
@@ -721,8 +569,10 @@ function computeReveal20Initial(input) {
     addVariable(subgroupPoint);
   }
 
-  componentPoints.ageSex = input.maleOver60 ? 2 : 0;
-  addVariable(componentPoints.ageSex);
+  if (input.sexAtBirth && input.ageYears !== null) {
+    componentPoints.ageSex = input.sexAtBirth === "male" && input.ageYears > 60 ? 2 : 0;
+    addVariable(componentPoints.ageSex);
+  }
 
   const renalInsufficiency = getRenalInsufficiencyFlag(input);
   if (renalInsufficiency !== null) {
@@ -754,10 +604,8 @@ function computeReveal20Initial(input) {
     addVariable(componentPoints.heartRate);
   }
 
-  if (input.recentHospitalization !== null) {
-    componentPoints.hospitalization = input.recentHospitalization ? 1 : 0;
-    addVariable(componentPoints.hospitalization);
-  }
+  componentPoints.hospitalization = input.recentHospitalization ? 1 : 0;
+  addVariable(componentPoints.hospitalization);
 
   if (input.walkDistance !== null) {
     let walkPoints = 0;
@@ -778,10 +626,8 @@ function computeReveal20Initial(input) {
     addVariable(biomarkerPoints);
   }
 
-  if (input.pericardialEffusion !== null) {
-    componentPoints.pericardialEffusion = input.pericardialEffusion ? 1 : 0;
-    addVariable(componentPoints.pericardialEffusion);
-  }
+  componentPoints.pericardialEffusion = input.pericardialEffusion ? 1 : 0;
+  addVariable(componentPoints.pericardialEffusion);
 
   if (input.dlcoPercentPred !== null) {
     componentPoints.dlco = input.dlcoPercentPred < 40 ? 1 : 0;
@@ -1069,25 +915,6 @@ function computeFrenchNoninvasiveFollowup(input) {
   };
 }
 
-function getRiskModelRequirements(modelId) {
-  if (modelId === "reveal20_initial") {
-    return { minimumForInterpretation: 7, totalVariables: 13 };
-  }
-  if (modelId === "escers_simplified_initial") {
-    return { minimumForInterpretation: 2, totalVariables: 3 };
-  }
-  if (modelId === "reveal_lite2_followup") {
-    return { minimumForInterpretation: 4, totalVariables: 6 };
-  }
-  if (modelId === "compera20_followup") {
-    return { minimumForInterpretation: 2, totalVariables: 3 };
-  }
-  if (modelId === "french_noninvasive_followup") {
-    return { minimumForInterpretation: 3, totalVariables: 3 };
-  }
-  return { minimumForInterpretation: 0, totalVariables: 0 };
-}
-
 function computeRisk(input) {
   const allowedModels = getAllowedRiskModels(input);
   if (!allowedModels.length) {
@@ -1107,9 +934,6 @@ function computeRisk(input) {
     ? input.riskModel
     : getDefaultRiskModel(input);
 
-  if (selectedModel === "escers_simplified_initial") {
-    return computeEscErsSimplifiedInitial(input);
-  }
   if (selectedModel === "reveal20_initial") {
     return computeReveal20Initial(input);
   }
@@ -1130,40 +954,8 @@ function sortDrugIdsAlphabetically(drugIds) {
   });
 }
 
-function mergeDrugIds(primaryDrugIds, additionalDrugIds) {
-  const seen = {};
-  const merged = [];
-  [primaryDrugIds || [], additionalDrugIds || []].forEach((drugIds) => {
-    drugIds.forEach((drugId) => {
-      if (!DRUGS[drugId] || seen[drugId]) {
-        return;
-      }
-      seen[drugId] = true;
-      merged.push(drugId);
-    });
-  });
-  return sortDrugIdsAlphabetically(merged);
-}
-
 function buildSelectionTarget(id, label, note, drugIds, min, max) {
   return { id, label, note, drugIds: sortDrugIdsAlphabetically(drugIds), min, max };
-}
-
-function pushSelectionTarget(decision, id, label, note, drugIds, min, max) {
-  const availableDrugIds = sortDrugIdsAlphabetically(drugIds.filter((drugId) => !!DRUGS[drugId]));
-  if (!availableDrugIds.length) {
-    return;
-  }
-  decision.selectionTargets.push(
-    buildSelectionTarget(
-      id,
-      label,
-      note,
-      availableDrugIds,
-      Math.min(min, availableDrugIds.length),
-      Math.min(max, availableDrugIds.length)
-    )
-  );
 }
 
 function formatRiskLabel(label) {
@@ -1185,140 +977,6 @@ function addActionUnique(decision, action) {
   }
 }
 
-function addMonitoringUnique(decision, item) {
-  if (!decision.monitoringSafety.includes(item)) {
-    decision.monitoringSafety.push(item);
-  }
-}
-
-function setPrimaryRecommendation(decision, message) {
-  decision.primaryRecommendation = message;
-}
-
-function getActivePolicy(input) {
-  return {
-    guidelineVersion: CLINICAL_POLICY.guidelineVersion,
-    lastUpdated: CLINICAL_POLICY.lastUpdated,
-    sotaterceptPlacementMode: input.sotaterceptPlacementMode || CLINICAL_POLICY.sotaterceptPlacementMode
-  };
-}
-
-function renderAppMetadata() {
-  const versionEl = document.getElementById("app-policy-version");
-  const updatedEl = document.getElementById("app-last-updated");
-
-  if (versionEl) {
-    versionEl.textContent = CLINICAL_POLICY.guidelineVersion;
-  }
-  if (updatedEl) {
-    updatedEl.textContent = CLINICAL_POLICY.lastUpdated;
-  }
-}
-
-function getCurrentRegimenState(input) {
-  const drugIds = sortDrugIdsAlphabetically((input.currentRegimenDrugIds || []).filter((drugId) => !!DRUGS[drugId]));
-  const classCounts = countByClass(drugIds);
-  const classIds = Object.keys(classCounts);
-
-  return {
-    drugIds,
-    names: drugIds.map((drugId) => DRUGS[drugId].name),
-    classCounts,
-    isEmpty: drugIds.length === 0,
-    hasDrug(drugId) {
-      return drugIds.includes(drugId);
-    },
-    hasClass(classId) {
-      return classIds.includes(classId);
-    },
-    hasEra: classIds.includes("era"),
-    hasPde5: classIds.includes("pde5i"),
-    hasSgc: classIds.includes("sgc"),
-    hasParenteral: classIds.includes("parenteral_prostacyclin"),
-    hasInhaledOrOralProstacyclin: classIds.includes("inhaled_oral_prostacyclin"),
-    hasIpReceptor: classIds.includes("ip_receptor"),
-    hasAnyProstacyclinPathway: classIds.includes("parenteral_prostacyclin") || classIds.includes("inhaled_oral_prostacyclin") || classIds.includes("ip_receptor"),
-    hasActivin: classIds.includes("activin")
-  };
-}
-
-function evaluateSotaterceptEligibility(input) {
-  let plateletStatus = "pending";
-  let plateletMessage = "Enter a baseline platelet count before recommending sotatercept.";
-  let eligible = false;
-
-  if (input.platelets !== null) {
-    if (input.platelets >= 50) {
-      plateletStatus = "pass";
-      plateletMessage = `Platelets ${Math.round(input.platelets)} x10^3/uL: eligible by label threshold (>=50).`;
-      eligible = true;
-    } else {
-      plateletStatus = "fail";
-      plateletMessage = `Platelets ${Math.round(input.platelets)} x10^3/uL: do not initiate sotatercept below 50 x10^3/uL.`;
-      eligible = false;
-    }
-  }
-
-  return {
-    eligible,
-    plateletStatus,
-    plateletMessage,
-    pregnancyMessage: input.pregnantOrTrying
-      ? "Pregnancy context: specialist counseling is required before any sotatercept decision."
-      : "Pregnancy context not flagged.",
-    monitoringMessage: "Monitoring reminder: check hemoglobin and platelets before each of the first 5 doses (or longer if unstable), then periodically.",
-    indicationMessage: "Label reminder: adult WHO Group 1 PAH indication includes exercise capacity, WHO functional class, and clinical worsening risk reduction."
-  };
-}
-
-function shouldSuggestSotatercept(policy, input, pathwayRiskLabel) {
-  if (input.whoGroup !== "1") {
-    return false;
-  }
-
-  if (policy.sotaterceptPlacementMode === "conservative") {
-    return input.assessmentStage === "initial"
-      ? pathwayRiskLabel === "high"
-      : pathwayRiskLabel === "intermediate_high" || pathwayRiskLabel === "high";
-  }
-
-  if (input.assessmentStage === "follow_up") {
-    return pathwayRiskLabel !== "low" && pathwayRiskLabel !== "unknown";
-  }
-  return pathwayRiskLabel === "high";
-}
-
-function maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentRegimen) {
-  const policy = decision.policy;
-  const eligibility = decision.sotaterceptEligibility;
-  if (currentRegimen && currentRegimen.hasDrug("sotatercept")) {
-    addMonitoringUnique(decision, "Current regimen already includes sotatercept: continue CBC monitoring and assess net clinical response before layering additional changes.");
-    return;
-  }
-  if (!shouldSuggestSotatercept(policy, input, pathwayRiskLabel)) {
-    return;
-  }
-
-  if (eligibility.eligible) {
-    addActionUnique(decision, "Consider adding sotatercept (Winrevair) if low-risk status has not been achieved.");
-  } else {
-    addActionUnique(decision, "Sotatercept may be considered after eligibility is confirmed, especially a qualifying platelet count.");
-  }
-
-  decision.selectionTargets.push(
-    buildSelectionTarget(
-      `sotatercept_${input.assessmentStage}`,
-      "Optional sotatercept add-on",
-      eligibility.eligible
-        ? "Suggested by the active policy mode; confirm ongoing CBC monitoring."
-        : "Suggested by the active policy mode, but eligibility is incomplete or failed. Check platelet threshold and counseling needs before use.",
-      ["sotatercept"],
-      0,
-      1
-    )
-  );
-}
-
 function appendDiuresisRecommendation(decision, input, hemo) {
   const postCapillaryContext =
     hemo.profile.includes("post-capillary") || hemo.profile.includes("Combined post/pre-capillary");
@@ -1329,7 +987,7 @@ function appendDiuresisRecommendation(decision, input, hemo) {
       decision,
       "Recommend decongestion/diuresis for volume overload (typically loop-diuretic based), with daily weights, intake/output review, and symptom reassessment."
     );
-    addMonitoringUnique(
+    addActionUnique(
       decision,
       "Monitor renal function and electrolytes (especially sodium and potassium) after diuretic initiation or dose adjustment."
     );
@@ -1343,7 +1001,7 @@ function appendDiuresisRecommendation(decision, input, hemo) {
   }
 
   if (input.whoGroup === "2" || postCapillaryContext) {
-    addMonitoringUnique(
+    addActionUnique(
       decision,
       "Assess for clinical congestion at each encounter and initiate/adjust diuresis when volume overload is present."
     );
@@ -1387,35 +1045,21 @@ function buildDecision(input) {
   const hemo = classifyHemodynamics(input);
   const risk = computeRisk(input);
   const showPahRiskScores = input.whoGroup === "1";
-  const policy = getActivePolicy(input);
-  const selectedModel = risk.modelId || input.riskModel || getDefaultRiskModel(input);
-  const riskRequirements = getRiskModelRequirements(selectedModel);
-  const currentRegimen = input.assessmentStage === "follow_up" && input.whoGroup === "1"
-    ? getCurrentRegimenState(input)
-    : null;
 
   const decision = {
     hemo,
     risk,
-    policy,
-    currentRegimenDrugIds: currentRegimen ? currentRegimen.drugIds : [],
     summary: [],
     riskTable: null,
-    transparencyTable: null,
-    primaryRecommendation: "",
     alerts: [],
     actions: [],
-    monitoringSafety: [],
-    eligibilityChecks: [],
     rationale: [],
-    selectionTargets: [],
-    sotaterceptEligibility: showPahRiskScores ? evaluateSotaterceptEligibility(input) : null
+    selectionTargets: []
   };
 
   decision.summary.push(`${hemo.profile}: ${hemo.detail}`);
 
   if (showPahRiskScores) {
-    decision.summary.push(`Sotatercept placement mode: ${formatRiskLabel(policy.sotaterceptPlacementMode)}.`);
     decision.summary.push(`Risk model selected: ${risk.modelName}.`);
     if (risk.label !== "unknown") {
       decision.summary.push(`Risk tier from selected model: ${formatRiskLabel(risk.label)}.`);
@@ -1430,34 +1074,14 @@ function buildDecision(input) {
         risk.score === null || risk.score === undefined ? "--" : Math.round(risk.score)
       ]]
     };
-    decision.transparencyTable = risk.riskTable;
-    if (risk.label === "unknown" && riskRequirements.totalVariables) {
-      decision.alerts.push(`Risk tier unavailable: enter at least ${riskRequirements.minimumForInterpretation} of ${riskRequirements.totalVariables} variables for the selected model.`);
-    } else if (risk.limitedData) {
+    if (risk.limitedData) {
       decision.alerts.push("Selected risk model is based on limited variables. Interpret cautiously.");
-    }
-    if (decision.sotaterceptEligibility) {
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.plateletMessage);
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.pregnancyMessage);
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.monitoringMessage);
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.indicationMessage);
-    }
-    if (currentRegimen) {
-      if (currentRegimen.isEmpty) {
-        decision.summary.push("Current regimen: not entered.");
-      } else {
-        decision.summary.push(`Current regimen: ${currentRegimen.names.join(", ")}.`);
-      }
-      if (currentRegimen.hasPde5 && currentRegimen.hasSgc) {
-        decision.alerts.push("Current regimen includes both a PDE5 inhibitor and riociguat. Verify that these are not being used together because the combination is contraindicated.");
-      }
     }
   } else {
     decision.summary.push(`WHO Group ${input.whoGroup} pathway selected.`);
   }
 
   if (!hemo.hasPH) {
-    setPrimaryRecommendation(decision, "Do not initiate PH-targeted therapy based on the currently entered hemodynamics.");
     decision.actions.push("Do not initiate PH-targeted therapy based on current hemodynamics alone.");
     decision.actions.push("Reassess diagnosis and repeat workup if clinical suspicion remains high.");
     decision.rationale.push("Current definitions require mPAP >20 mmHg to meet hemodynamic PH criteria.");
@@ -1479,7 +1103,6 @@ function buildDecision(input) {
   }
 
   if (input.whoGroup === "2") {
-    setPrimaryRecommendation(decision, "Treat the left-heart disease phenotype first and avoid routine PAH-targeted therapy in Group 2 PH.");
     decision.alerts.push("Group 2 PH-LHD guardrail: routine PAH-targeted therapy is not recommended.");
     decision.actions.push("Prioritize optimization of left-heart disease and volume/hemodynamic management.");
     decision.actions.push("Refer to a PH center when diagnosis is uncertain or there is severe pre-capillary component/RV dysfunction.");
@@ -1488,7 +1111,6 @@ function buildDecision(input) {
   }
 
   if (input.whoGroup === "3") {
-    setPrimaryRecommendation(decision, "Optimize lung disease, oxygenation, and supportive care first; reserve targeted therapy for selected PH-ILD pathways.");
     decision.actions.push("Optimize underlying lung disease, oxygenation, and supportive care first.");
     if (input.ildAssociated) {
       decision.actions.push("PH-ILD branch: inhaled treprostinil can be considered with specialist oversight.");
@@ -1523,7 +1145,6 @@ function buildDecision(input) {
   }
 
   if (input.whoGroup === "4") {
-    setPrimaryRecommendation(decision, "CTEPH pathway: anticoagulation plus expert operability/BPA assessment is the main recommendation.");
     decision.actions.push("Initiate/continue lifelong therapeutic anticoagulation unless contraindicated.");
     decision.actions.push("Ensure CTEPH team evaluation for operability (PEA) and BPA candidacy.");
     decision.actions.push("For inoperable or persistent/recurrent symptomatic PH after PEA, consider riociguat.");
@@ -1555,7 +1176,6 @@ function buildDecision(input) {
   }
 
   if (input.whoGroup === "5") {
-    setPrimaryRecommendation(decision, "Focus management on the underlying multifactorial cause and use PH-center input for individualized therapy decisions.");
     decision.actions.push("Focus treatment on the underlying multifactorial/associated disorder.");
     decision.actions.push("Use PH-center consultation for individualized decisions on targeted therapy.");
     decision.rationale.push("Group 5 has heterogeneous mechanisms and no broadly standardized PAH-targeted algorithm.");
@@ -1564,17 +1184,6 @@ function buildDecision(input) {
 
   if (input.whoGroup !== "1") {
     decision.alerts.push("Unknown WHO group selection; unable to map therapy path safely.");
-    return decision;
-  }
-
-  if (risk.label === "unknown") {
-    setPrimaryRecommendation(decision, "Risk tier unavailable: obtain the missing risk variables before making escalation decisions.");
-    addActionUnique(
-      decision,
-      `Complete at least ${riskRequirements.minimumForInterpretation} of ${riskRequirements.totalVariables} variables for ${risk.modelName || "the selected model"} before using risk-tier-driven escalation.`
-    );
-    addActionUnique(decision, "Obtain missing labs, walk distance, hemodynamics, or clinical variables at the next assessment.");
-    decision.rationale.push("The review recommended avoiding overtreatment when risk stratification is incomplete.");
     return decision;
   }
 
@@ -1587,10 +1196,9 @@ function buildDecision(input) {
     decision.alerts.push("Using conservative fallback risk tier because score inputs are incomplete.");
   }
 
-  setPrimaryRecommendation(decision, "Group 1 PAH pathway active: use a treat-to-low-risk strategy with escalation when low risk is not achieved.");
+  decision.actions.push("Group 1 PAH pathway active. Treat-to-low-risk strategy applied.");
 
   if (input.vasoreactivityEligible && input.vasoreactivityPositive) {
-    setPrimaryRecommendation(decision, "Positive vasoreactivity branch: consider a high-dose calcium-channel-blocker strategy with strict reassessment.");
     decision.actions.push("Positive vasoreactivity branch: consider high-dose CCB strategy with strict reassessment.");
     decision.selectionTargets.push(
       buildSelectionTarget(
@@ -1606,7 +1214,6 @@ function buildDecision(input) {
   }
 
   if (input.cardiopulmonaryComorbidities) {
-    setPrimaryRecommendation(decision, "Comorbidity-heavy PAH phenotype: favor cautious oral monotherapy with individualized escalation.");
     decision.actions.push("Comorbidity-heavy PAH phenotype: start with cautious oral monotherapy and individualize escalation.");
     decision.selectionTargets.push(
       buildSelectionTarget(
@@ -1625,7 +1232,6 @@ function buildDecision(input) {
 
   if (input.assessmentStage === "initial") {
     if (pathwayRiskLabel === "high") {
-      setPrimaryRecommendation(decision, "High initial-risk PAH: use upfront combination therapy including parenteral prostacyclin, an ERA, and a PDE5 inhibitor.");
       decision.actions.push("High baseline risk: use upfront combination including parenteral prostacyclin + ERA + PDE5 inhibitor.");
       decision.actions.push("Initiate early advanced-therapy planning with transplant center involvement.");
       decision.selectionTargets.push(
@@ -1638,11 +1244,17 @@ function buildDecision(input) {
           ["epoprostenol_iv", "treprostinil_sciv"],
           1,
           1
+        ),
+        buildSelectionTarget(
+          "initial_sotatercept_optional",
+          "Optional add-on pathway",
+          "Sotatercept can be considered as an add-on per center practice and eligibility.",
+          ["sotatercept"],
+          0,
+          1
         )
       );
-      maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentRegimen);
     } else {
-      setPrimaryRecommendation(decision, "Low/intermediate initial-risk PAH: start foundational oral dual therapy with an ERA plus a PDE5 inhibitor.");
       decision.actions.push("Low/intermediate baseline risk: start foundational oral dual therapy (ERA + PDE5 inhibitor).");
       decision.selectionTargets.push(
         buildSelectionTarget("initial_era", "ERA selection", "Select one ERA.", ["bosentan", "ambrisentan", "macitentan"], 1, 1),
@@ -1655,207 +1267,59 @@ function buildDecision(input) {
   }
 
   if (pathwayRiskLabel === "low") {
-    setPrimaryRecommendation(decision, "Low follow-up risk achieved: continue the current regimen and maintain low-risk status.");
-    if (currentRegimen && !currentRegimen.isEmpty) {
-      decision.actions.push(`Low follow-up risk achieved: continue the current regimen (${currentRegimen.names.join(", ")}) and reassess every 3-6 months.`);
-    } else {
-      decision.actions.push("Low follow-up risk achieved: continue current regimen and reassess every 3-6 months.");
-      decision.actions.push("Enter the current regimen if you want maintenance guidance to reflect the therapies already in place.");
-    }
+    decision.actions.push("Low follow-up risk achieved: continue current regimen and reassess every 3-6 months.");
     decision.rationale.push("Therapeutic goal is maintenance of low-risk status.");
     appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
     return decision;
   }
 
   if (pathwayRiskLabel === "intermediate_low" || pathwayRiskLabel === "intermediate") {
-    if (currentRegimen && !currentRegimen.isEmpty) {
-      const hasFoundationalDualPathway = currentRegimen.hasEra && (currentRegimen.hasPde5 || currentRegimen.hasSgc);
-      if (!hasFoundationalDualPathway) {
-        setPrimaryRecommendation(decision, "Intermediate follow-up risk with incomplete foundational therapy: complete dual-pathway therapy first, then reassess promptly.");
-        decision.actions.push("Current regimen suggests foundational therapy is incomplete for follow-up escalation.");
-        if (!currentRegimen.hasEra) {
-          pushSelectionTarget(
-            decision,
-            "followup_missing_era",
-            "ERA add-on",
-            "Select one ERA to complete foundational therapy.",
-            ["ambrisentan", "bosentan", "macitentan"],
-            1,
-            1
-          );
-        }
-        if (!currentRegimen.hasPde5 && !currentRegimen.hasSgc) {
-          pushSelectionTarget(
-            decision,
-            "followup_missing_no_pathway",
-            "Nitric oxide pathway add-on",
-            "Select one nitric oxide pathway agent to complete foundational therapy.",
-            ["sildenafil", "tadalafil"],
-            1,
-            1
-          );
-        }
-        decision.rationale.push("Entered therapy history suggests the patient is not yet on the usual ERA-based dual-pathway foundation, so completion of foundational therapy is the first escalation step.");
-        appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
-        return decision;
-      }
-
-      if (!currentRegimen.hasAnyProstacyclinPathway) {
-        setPrimaryRecommendation(decision, "Intermediate follow-up risk despite dual-pathway therapy: add a prostacyclin-pathway agent and reassess soon because low risk has not been reached.");
-        decision.actions.push(`Current regimen already includes foundational therapy (${currentRegimen.names.join(", ")}).`);
-        decision.actions.push("Add a prostacyclin-pathway therapy rather than re-selecting therapies already in the regimen.");
-        pushSelectionTarget(
-          decision,
-          "followup_addon_prostacyclin",
-          "Prostacyclin-pathway add-on",
-          "Select one prostacyclin-pathway add-on if escalating beyond the current regimen.",
-          ["iloprost", "selexipag", "treprostinil_dpi", "treprostinil_inhaled", "treprostinil_oral"],
-          0,
-          1
-        );
-        if (currentRegimen.hasPde5 && !currentRegimen.hasSgc) {
-          pushSelectionTarget(
-            decision,
-            "followup_switch_riociguat",
-            "Optional PDE5 to riociguat switch",
-            "Select riociguat only as a true switch strategy with PDE5 discontinuation and washout.",
-            ["riociguat"],
-            0,
-            1
-          );
-        }
-        maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentRegimen);
-        decision.rationale.push("Residual intermediate risk on dual-pathway therapy generally prompts addition of a prostacyclin-pathway agent or selected strategy switch.");
-        appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
-        return decision;
-      }
-
-      if (!currentRegimen.hasParenteral) {
-        setPrimaryRecommendation(decision, "Intermediate follow-up risk despite advanced oral/inhaled therapy: consider parenteral prostacyclin escalation and reassess transplant-oriented planning.");
-        decision.actions.push(`Current regimen already includes advanced pathway therapy (${currentRegimen.names.join(", ")}).`);
-        decision.actions.push("Because low risk is still not achieved, consider escalation from non-parenteral therapy to a parenteral prostacyclin-centered strategy.");
-        pushSelectionTarget(
-          decision,
-          "followup_optional_parenteral",
-          "Parenteral prostacyclin escalation",
-          "Select one continuous infusion strategy if escalating beyond current non-parenteral therapy.",
-          ["epoprostenol_iv", "treprostinil_sciv"],
-          0,
-          1
-        );
-        maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentRegimen);
-        decision.rationale.push("Persistently intermediate risk despite oral or inhaled prostacyclin-pathway therapy should trigger consideration of parenteral escalation.");
-        appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
-        return decision;
-      }
-
-      setPrimaryRecommendation(decision, "Intermediate follow-up risk despite parenteral therapy: optimize infusion dosing, confirm adherence/support systems, and advance transplant-oriented care.");
-      decision.actions.push(`Current regimen already includes parenteral therapy (${currentRegimen.names.join(", ")}).`);
-      decision.actions.push("Optimize current parenteral prostacyclin dosing and review pump/line adherence before adding further complexity.");
-      if (!currentRegimen.hasEra) {
-        pushSelectionTarget(
-          decision,
-          "followup_missing_era_with_parenteral",
-          "ERA add-on",
-          "Select one ERA if it is not already part of the current regimen.",
-          ["ambrisentan", "bosentan", "macitentan"],
-          1,
-          1
-        );
-      }
-      if (!currentRegimen.hasPde5 && !currentRegimen.hasSgc) {
-        pushSelectionTarget(
-          decision,
-          "followup_missing_no_pathway_with_parenteral",
-          "Nitric oxide pathway add-on",
-          "Select one nitric oxide pathway therapy if it is not already part of the regimen.",
-          ["sildenafil", "tadalafil"],
-          1,
-          1
-        );
-      }
-      maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentRegimen);
-      decision.rationale.push("Intermediate risk despite parenteral therapy suggests the need for parenteral optimization and early advanced-therapy planning rather than re-offering the same classes.");
-      appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
-      return decision;
-    }
-
-    setPrimaryRecommendation(decision, "Intermediate follow-up risk: escalate add-on therapy and reassess soon because low-risk status has not yet been reached.");
     decision.actions.push("Intermediate-low follow-up risk: escalate add-on therapy and reassess within 3-6 months.");
-    decision.actions.push("Enter the current regimen to tailor escalation options to therapies already in place.");
     decision.actions.push("Options include adding selexipag/prostacyclin pathway agent and/or considering PDE5 inhibitor to riociguat switch.");
-    pushSelectionTarget(
-      decision,
-      "followup_addon_prostacyclin",
-      "Optional prostacyclin pathway add-on",
-      "Select one add-on pathway agent if escalating.",
-      ["selexipag", "treprostinil_oral", "treprostinil_inhaled", "treprostinil_dpi", "iloprost"],
-      0,
-      1
+    decision.selectionTargets.push(
+      buildSelectionTarget(
+        "followup_addon_prostacyclin",
+        "Optional prostacyclin pathway add-on",
+        "Select one add-on pathway agent if escalating.",
+        ["selexipag", "treprostinil_oral", "treprostinil_inhaled", "treprostinil_dpi", "iloprost"],
+        0,
+        1
+      ),
+      buildSelectionTarget(
+        "followup_switch_riociguat",
+        "Optional PDE5 to riociguat switch",
+        "Select riociguat only as a switch strategy (not combined with PDE5 inhibitor).",
+        ["riociguat"],
+        0,
+        1
+      )
     );
-    pushSelectionTarget(
-      decision,
-      "followup_switch_riociguat",
-      "Optional PDE5 to riociguat switch",
-      "Select riociguat only as a switch strategy (not combined with PDE5 inhibitor).",
-      ["riociguat"],
-      0,
-      1
-    );
-    maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentRegimen);
     decision.rationale.push("Intermediate-low risk after foundational therapy should trigger additional pathway therapy or strategic switch.");
     appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
     return decision;
   }
 
-  if (currentRegimen && !currentRegimen.isEmpty) {
-    if (!currentRegimen.hasParenteral) {
-      setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk without parenteral therapy: escalate urgently to a parenteral-prostacyclin-centered regimen and refer for transplant-oriented care.");
-      decision.actions.push(`Current regimen before escalation: ${currentRegimen.names.join(", ")}.`);
-      decision.actions.push("Urgently add parenteral prostacyclin because the current regimen has not achieved low-risk status.");
-      if (!currentRegimen.hasEra) {
-        pushSelectionTarget(decision, "highrisk_era", "ERA add-on", "Ensure one ERA is part of the escalated regimen.", ["bosentan", "ambrisentan", "macitentan"], 1, 1);
-      }
-      if (!currentRegimen.hasPde5 && !currentRegimen.hasSgc) {
-        pushSelectionTarget(decision, "highrisk_pde5", "Nitric oxide pathway add-on", "Ensure one nitric oxide pathway therapy is part of the escalated regimen.", ["sildenafil", "tadalafil"], 1, 1);
-      }
-      pushSelectionTarget(
-        decision,
-        "highrisk_parenteral",
-        "Parenteral prostacyclin selection",
-        "Select one continuous infusion strategy for urgent escalation.",
-        ["epoprostenol_iv", "treprostinil_sciv"],
-        1,
-        1
-      );
-    } else {
-      setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk despite parenteral therapy: optimize infusion intensity, add any missing pathway therapy, and advance transplant listing evaluation.");
-      decision.actions.push(`Current regimen already includes parenteral therapy (${currentRegimen.names.join(", ")}).`);
-      decision.actions.push("Escalate beyond the current regimen by optimizing parenteral dosing and closing any missing pathway gaps while moving transplant planning forward.");
-      if (!currentRegimen.hasEra) {
-        pushSelectionTarget(decision, "highrisk_era", "ERA add-on", "Ensure one ERA is part of the regimen.", ["bosentan", "ambrisentan", "macitentan"], 1, 1);
-      }
-      if (!currentRegimen.hasPde5 && !currentRegimen.hasSgc) {
-        pushSelectionTarget(decision, "highrisk_pde5", "Nitric oxide pathway add-on", "Ensure one nitric oxide pathway therapy is part of the regimen.", ["sildenafil", "tadalafil"], 1, 1);
-      }
-    }
-  } else {
-    setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk: escalate to a parenteral-prostacyclin-centered regimen and refer for transplant-oriented care.");
-    decision.actions.push("Intermediate-high/high follow-up risk: escalate to parenteral prostacyclin-centered regimen and refer to transplant center.");
-    decision.actions.push("Enter the current regimen to tailor high-risk escalation to therapies already in place.");
-    pushSelectionTarget(decision, "highrisk_era", "ERA selection", "Ensure one ERA is in the regimen.", ["bosentan", "ambrisentan", "macitentan"], 1, 1);
-    pushSelectionTarget(decision, "highrisk_pde5", "PDE5 inhibitor selection", "Ensure one PDE5 inhibitor is in the regimen.", ["sildenafil", "tadalafil"], 1, 1);
-    pushSelectionTarget(
-      decision,
+  decision.actions.push("Intermediate-high/high follow-up risk: escalate to parenteral prostacyclin-centered regimen and refer to transplant center.");
+  decision.selectionTargets.push(
+    buildSelectionTarget("highrisk_era", "ERA selection", "Ensure one ERA is in the regimen.", ["bosentan", "ambrisentan", "macitentan"], 1, 1),
+    buildSelectionTarget("highrisk_pde5", "PDE5 inhibitor selection", "Ensure one PDE5 inhibitor is in the regimen.", ["sildenafil", "tadalafil"], 1, 1),
+    buildSelectionTarget(
       "highrisk_parenteral",
       "Parenteral prostacyclin selection",
       "Select one continuous infusion strategy.",
       ["epoprostenol_iv", "treprostinil_sciv"],
       1,
       1
-    );
-  }
-  maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentRegimen);
+    ),
+    buildSelectionTarget(
+      "highrisk_sotatercept_optional",
+      "Optional additional pathway",
+      "Sotatercept can be considered based on eligibility and center protocol.",
+      ["sotatercept"],
+      0,
+      1
+    )
+  );
   decision.rationale.push("Failure to achieve low risk at higher strata should trigger aggressive escalation and advanced therapy referral.");
   appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
   return decision;
@@ -1918,16 +1382,8 @@ function validateSelection(decision, input, selectedDrugIds) {
     cautions.push("Interaction caution: clopidogrel with selexipag often requires once-daily dosing adjustment.");
   }
 
-  if (selectedDrugIds.includes("sotatercept") && input.platelets === null) {
-    issues.push("Sotatercept initiation rule: enter a baseline platelet count before selecting sotatercept.");
-  }
-
   if (selectedDrugIds.includes("sotatercept") && input.platelets !== null && input.platelets < 50) {
     issues.push("Sotatercept initiation rule: do not start if platelets are below 50 x10^3/uL (50,000/mm3).");
-  }
-
-  if (selectedDrugIds.includes("sotatercept") && input.pregnantOrTrying) {
-    cautions.push("Sotatercept pregnancy context: specialist counseling and risk-benefit review are required.");
   }
 
   if (selectedDrugIds.includes("riociguat") && input.systolicBp !== null && input.systolicBp < 95) {
@@ -1957,289 +1413,15 @@ function validateSelection(decision, input, selectedDrugIds) {
   return { issues, cautions };
 }
 
-function getRiskToneClass(label) {
-  if (label === "low") return "tone-low";
-  if (label === "intermediate_low" || label === "intermediate") return "tone-intermediate";
-  if (label === "intermediate_high" || label === "high") return "tone-high";
-  return "tone-neutral";
-}
-
-function getRiskTileColorClass(tier) {
-  if (tier === "low") return "risk-low";
-  if (tier === "intermediate_low" || tier === "intermediate") return "risk-intermediate-low";
-  if (tier === "intermediate_high") return "risk-intermediate-high";
-  if (tier === "high") return "risk-high";
-  return "";
-}
-
-function getSelectedRiskModelFromUi() {
-  const select = document.getElementById("risk-model");
-  return select ? select.value : null;
-}
-
-function renderRiskStrataTiles(modelId) {
-  const grid = document.getElementById("risk-strata-grid");
-  if (!grid) {
-    return;
-  }
-
-  const selectedModel = modelId || getSelectedRiskModelFromUi();
-  const tiles = selectedModel && RISK_STRATA_CONFIG[selectedModel]
-    ? RISK_STRATA_CONFIG[selectedModel]
-    : [];
-
-  grid.innerHTML = tiles
-    .map((tile) => `
-      <div class="risk-strata-tile ${getRiskTileColorClass(tile.tier)}" data-risk-tier="${escapeHtml(tile.tier)}" data-risk-model="${escapeHtml(selectedModel || "")}">
-        <strong>${escapeHtml(tile.title)}</strong>
-        <small>${escapeHtml(tile.note)}</small>
-        ${tile.meta ? `<span class="risk-strata-meta">${escapeHtml(tile.meta)}</span>` : ""}
-      </div>
-    `)
-    .join("");
-}
-
-function updateRiskStrataHighlight(label, modelId) {
-  renderRiskStrataTiles(modelId);
-  const tiles = Array.prototype.slice.call(document.querySelectorAll(".risk-strata-tile"));
-  tiles.forEach((tile) => {
-    if (label && tile.getAttribute("data-risk-tier") === label) {
-      tile.classList.add("is-active");
-    } else {
-      tile.classList.remove("is-active");
-    }
-  });
-}
-
-function getLiveRiskPreview(input) {
-  const modelId = input.riskModel || getDefaultRiskModel(input);
-  if (input.whoGroup !== "1") {
-    return { label: null, modelId };
-  }
-
-  const risk = computeRisk(input);
-  const resolvedModelId = risk.modelId || modelId;
-  const requirements = getRiskModelRequirements(resolvedModelId);
-  const hasSufficientData =
-    risk.label !== "unknown"
-    && risk.variablesUsed >= requirements.minimumForInterpretation;
-
-  return {
-    label: hasSufficientData ? risk.label : null,
-    modelId: resolvedModelId
-  };
-}
-
-function setResultsPanelState(hasResults, collapsed) {
-  const resultsPanel = document.getElementById("results-panel");
-  const toggleBtn = document.getElementById("toggle-results-btn");
-  if (!resultsPanel || !toggleBtn) {
-    return;
-  }
-
-  const panelHasResults = !!hasResults;
-  const panelCollapsed = panelHasResults ? !!collapsed : false;
-  resultsPanel.setAttribute("data-has-results", panelHasResults ? "1" : "0");
-  resultsPanel.setAttribute("data-collapsed", panelCollapsed ? "1" : "0");
-  toggleBtn.textContent = panelCollapsed ? "Expand" : "Collapse";
-  toggleBtn.setAttribute("aria-expanded", panelCollapsed ? "false" : "true");
-}
-
-function clearDecisionOutput() {
-  const summaryEl = document.getElementById("decision-summary");
-  const sectionIds = [
-    "primary-recommendation",
-    "alerts",
-    "action-items",
-    "monitoring-items",
-    "eligibility-checks",
-    "risk-transparency",
-    "recommendation-rationale",
-    "medication-selector",
-    "regimen-validation",
-    "medication-details"
-  ];
-
-  if (summaryEl) {
-    summaryEl.classList.add("muted");
-    summaryEl.textContent = "No analysis yet.";
-  }
-
-  sectionIds.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.innerHTML = "";
-    }
-  });
-
-  updateRiskStrataHighlight(null, getSelectedRiskModelFromUi());
-  setResultsPanelState(false, false);
-  window.__CURRENT_INPUT = null;
-}
-
-function bindResultsPanelControls() {
-  if (window.__PH_RESULTS_CONTROLS_BOUND) {
-    return;
-  }
-  window.__PH_RESULTS_CONTROLS_BOUND = true;
-
-  const toggleBtn = document.getElementById("toggle-results-btn");
-  const resetBtn = document.getElementById("reset-results-btn");
-  const resultsPanel = document.getElementById("results-panel");
-
-  if (toggleBtn && resultsPanel) {
-    toggleBtn.addEventListener("click", () => {
-      const hasResults = resultsPanel.getAttribute("data-has-results") === "1";
-      if (!hasResults) {
-        return;
-      }
-      const currentlyCollapsed = resultsPanel.getAttribute("data-collapsed") === "1";
-      setResultsPanelState(true, !currentlyCollapsed);
-    });
-  }
-
-  if (resetBtn) {
-    resetBtn.addEventListener("click", clearDecisionOutput);
-  }
-}
-
-function buildRegimenSummaryHtml(currentRegimenDrugIds) {
-  if (!currentRegimenDrugIds || !currentRegimenDrugIds.length) {
-    return "";
-  }
-
-  const regimenNames = currentRegimenDrugIds
-    .map((drugId) => DRUGS[drugId])
-    .filter(Boolean)
-    .map((drug) => drug.name);
-
-  if (!regimenNames.length) {
-    return "";
-  }
-
-  return `
-    <div class="ok-card">
-      <strong>Current Follow-up Regimen</strong>
-      <p>${escapeHtml(regimenNames.join(", "))}</p>
-      <p class="muted">These medications will be included in regimen validation and medication details.</p>
-    </div>
-  `;
-}
-
-function buildValidationHtml(validation, currentRegimenDrugIds, selectedDrugIds) {
-  const hasCurrentRegimen = !!(currentRegimenDrugIds && currentRegimenDrugIds.length);
-  const hasSelectedDrugs = !!(selectedDrugIds && selectedDrugIds.length);
-  let contextNote = "";
-
-  if (hasCurrentRegimen && hasSelectedDrugs) {
-    contextNote = "Validation includes the current follow-up regimen plus newly selected medications.";
-  } else if (hasCurrentRegimen) {
-    contextNote = "Validation includes the current follow-up regimen.";
-  } else if (hasSelectedDrugs) {
-    contextNote = "Validation includes the selected medications.";
-  }
-
-  const validationCards = [];
-  if (validation.issues.length) {
-    validationCards.push.apply(
-      validationCards,
-      validation.issues.map((issue) => `<div class="alert-card"><strong>Contraindication/Hard Stop:</strong> ${escapeHtml(issue)}</div>`)
-    );
-  }
-  if (validation.cautions.length) {
-    validationCards.push.apply(
-      validationCards,
-      validation.cautions.map((caution) => `<div class="alert-card"><strong>Caution:</strong> ${escapeHtml(caution)}</div>`)
-    );
-  }
-  if (!validation.issues.length && !validation.cautions.length) {
-    validationCards.push("<div class=\"ok-card\">No high-risk conflicts detected from the active regimen and entered patient context.</div>");
-  }
-
-  return `
-    <strong>Regimen Validation</strong>
-    ${contextNote ? `<p class="muted">${escapeHtml(contextNote)}</p>` : ""}
-    ${validationCards.join("")}
-  `;
-}
-
-function buildMedicationDetailsHtml(drugIds, currentRegimenDrugIds, selectedDrugIds) {
-  if (!drugIds || !drugIds.length) {
-    return "<strong>Medication Details</strong><p>No medications selected.</p>";
-  }
-
-  const currentRegimenLookup = {};
-  const selectedLookup = {};
-  (currentRegimenDrugIds || []).forEach((drugId) => {
-    currentRegimenLookup[drugId] = true;
-  });
-  (selectedDrugIds || []).forEach((drugId) => {
-    selectedLookup[drugId] = true;
-  });
-
-  const hasCurrentRegimen = !!(currentRegimenDrugIds && currentRegimenDrugIds.length);
-  const hasSelectedDrugs = !!(selectedDrugIds && selectedDrugIds.length);
-  let contextNote = "";
-
-  if (hasCurrentRegimen && hasSelectedDrugs) {
-    contextNote = "Medication details include the current follow-up regimen plus newly selected medications.";
-  } else if (hasCurrentRegimen) {
-    contextNote = "Medication details reflect the current follow-up regimen.";
-  }
-
-  return `
-    <strong>Medication Details</strong>
-    ${contextNote ? `<p class="muted">${escapeHtml(contextNote)}</p>` : ""}
-    ${drugIds
-      .map((drugId) => {
-        const d = DRUGS[drugId];
-        if (!d) {
-          return "";
-        }
-
-        let sourceLabel = "Included in regimen";
-        if (currentRegimenLookup[drugId] && selectedLookup[drugId]) {
-          sourceLabel = "Current regimen + new selection";
-        } else if (currentRegimenLookup[drugId]) {
-          sourceLabel = "Current regimen";
-        } else if (selectedLookup[drugId]) {
-          sourceLabel = "New selection";
-        }
-
-        return `
-          <article class="drug-card">
-            <h4>${escapeHtml(d.name)}</h4>
-            <p class="detail-row"><strong>Status:</strong> ${escapeHtml(sourceLabel)}</p>
-            <p class="detail-row"><strong>Class:</strong> ${escapeHtml(CLASS_LABELS[d.classId])}</p>
-            <p class="detail-row"><strong>Route:</strong> ${escapeHtml(d.route)}</p>
-            <p class="detail-row"><strong>Start dose:</strong> ${escapeHtml(d.startDose)}</p>
-            <p class="detail-row"><strong>Goal/titration:</strong> ${escapeHtml(d.goalDose)}</p>
-            <p class="detail-row"><strong>Monitoring:</strong> ${escapeHtml(d.monitoring)}</p>
-            <p class="detail-row"><strong>Key interactions:</strong> ${escapeHtml(d.interactions)}</p>
-            <p class="detail-row"><strong>Renal considerations:</strong> ${escapeHtml(d.renal)}</p>
-            <p class="detail-row"><strong>Hepatic considerations:</strong> ${escapeHtml(d.hepatic)}</p>
-            <p class="detail-row"><strong>Pregnancy considerations:</strong> ${escapeHtml(d.pregnancy)}</p>
-          </article>
-        `;
-      })
-      .join("")}
-  `;
-}
-
 function renderDecision(decision) {
   const summaryEl = document.getElementById("decision-summary");
-  const primaryEl = document.getElementById("primary-recommendation");
   const alertsEl = document.getElementById("alerts");
   const actionsEl = document.getElementById("action-items");
-  const monitoringEl = document.getElementById("monitoring-items");
-  const eligibilityEl = document.getElementById("eligibility-checks");
-  const transparencyEl = document.getElementById("risk-transparency");
   const rationaleEl = document.getElementById("recommendation-rationale");
   const selectorEl = document.getElementById("medication-selector");
   const validationEl = document.getElementById("regimen-validation");
   const detailsEl = document.getElementById("medication-details");
-  const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
-  const riskToneClass = getRiskToneClass(decision.risk.pathwayLabel || decision.risk.label);
+
   const riskTableHtml = decision.riskTable && decision.riskTable.columns && decision.riskTable.rows && decision.riskTable.rows.length
     ? `
       <div class="risk-table-wrap">
@@ -2260,30 +1442,6 @@ function renderDecision(decision) {
       </div>
     `
     : "";
-  const transparencyTableHtml = decision.transparencyTable && decision.transparencyTable.columns && decision.transparencyTable.rows && decision.transparencyTable.rows.length
-    ? `
-      <strong>Risk Tool Transparency</strong>
-      <div class="risk-table-wrap">
-        <table class="risk-table">
-          <thead>
-            <tr>
-              ${decision.transparencyTable.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${decision.transparencyTable.rows.map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `
-    : "";
-
-  updateRiskStrataHighlight(decision.risk.label, decision.risk.modelId || getSelectedRiskModelFromUi());
-  setResultsPanelState(true, false);
 
   summaryEl.classList.remove("muted");
   summaryEl.innerHTML = `
@@ -2294,18 +1452,6 @@ function renderDecision(decision) {
     </div>
   `;
 
-  primaryEl.innerHTML = decision.primaryRecommendation
-    ? `
-      <div class="primary-reco-card ${riskToneClass}">
-        <div class="primary-reco-topline">
-          <strong>Primary Recommendation</strong>
-          <span class="risk-badge ${riskToneClass}">${escapeHtml(formatRiskLabel(decision.risk.label || "unknown"))}</span>
-        </div>
-        <p>${escapeHtml(decision.primaryRecommendation)}</p>
-      </div>
-    `
-    : "";
-
   if (decision.alerts.length) {
     alertsEl.innerHTML = decision.alerts
       .map((alert) => `<div class="alert-card"><strong>Guardrail:</strong> ${escapeHtml(alert)}</div>`)
@@ -2315,19 +1461,9 @@ function renderDecision(decision) {
   }
 
   actionsEl.innerHTML = `
-    <strong>Escalation Options / Next Actions</strong>
-    ${decision.actions.length ? `<ol>${decision.actions.map((action) => `<li>${escapeHtml(action)}</li>`).join("")}</ol>` : "<p>No additional escalation options listed.</p>"}
+    <strong>Recommended Actions</strong>
+    <ol>${decision.actions.map((action) => `<li>${escapeHtml(action)}</li>`).join("")}</ol>
   `;
-
-  monitoringEl.innerHTML = decision.monitoringSafety.length
-    ? `<strong>Monitoring / Safety</strong><ul>${decision.monitoringSafety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-    : "";
-
-  eligibilityEl.innerHTML = decision.eligibilityChecks.length
-    ? `<strong>Eligibility Checks</strong><ul>${decision.eligibilityChecks.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-    : "";
-
-  transparencyEl.innerHTML = transparencyTableHtml;
 
   rationaleEl.innerHTML = decision.rationale.length
     ? `<strong>Rationale</strong><ul>${decision.rationale.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
@@ -2337,24 +1473,13 @@ function renderDecision(decision) {
   detailsEl.innerHTML = "";
 
   if (!decision.selectionTargets.length) {
-    selectorEl.innerHTML = `
-      <strong>Medication Selection</strong>
-      <p>No additional medication selection required in this branch.</p>
-      ${buildRegimenSummaryHtml(currentRegimenDrugIds)}
-    `;
-    if (currentRegimenDrugIds.length) {
-      const input = window.__CURRENT_INPUT;
-      const validation = validateSelection(decision, input, currentRegimenDrugIds);
-      validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, []);
-      detailsEl.innerHTML = buildMedicationDetailsHtml(currentRegimenDrugIds, currentRegimenDrugIds, []);
-    }
+    selectorEl.innerHTML = "<strong>Medication Selection</strong><p>No medication selection required in this branch.</p>";
     return;
   }
 
   selectorEl.innerHTML = `
     <strong>Medication Selection</strong>
     <p>Select preferred medications where options exist, then validate the regimen.</p>
-    ${buildRegimenSummaryHtml(currentRegimenDrugIds)}
     <form id="med-select-form">
       <div class="reco-grid">
         ${decision.selectionTargets
@@ -2381,7 +1506,7 @@ function renderDecision(decision) {
           })
           .join("")}
       </div>
-      <button class="validate-btn" type="submit">${currentRegimenDrugIds.length ? "Validate Combined Regimen and Show Drug Details" : "Validate Regimen and Show Drug Details"}</button>
+      <button class="validate-btn" type="submit">Validate Regimen and Show Drug Details</button>
     </form>
   `;
 
@@ -2390,12 +1515,55 @@ function renderDecision(decision) {
     const form = event.currentTarget;
     const checkedInputs = Array.prototype.slice.call(form.querySelectorAll("input:checked"));
     const selectedDrugIds = sortDrugIdsAlphabetically(checkedInputs.map((el) => el.value));
-    const combinedDrugIds = mergeDrugIds(currentRegimenDrugIds, selectedDrugIds);
     const input = window.__CURRENT_INPUT;
-    const validation = validateSelection(decision, input, combinedDrugIds);
+    const validation = validateSelection(decision, input, selectedDrugIds);
 
-    validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, selectedDrugIds);
-    detailsEl.innerHTML = buildMedicationDetailsHtml(combinedDrugIds, currentRegimenDrugIds, selectedDrugIds);
+    const validationCards = [];
+    if (validation.issues.length) {
+      validationCards.push.apply(
+        validationCards,
+        validation.issues.map((issue) => `<div class="alert-card"><strong>Contraindication/Hard Stop:</strong> ${escapeHtml(issue)}</div>`)
+      );
+    }
+    if (validation.cautions.length) {
+      validationCards.push.apply(
+        validationCards,
+        validation.cautions.map((caution) => `<div class="alert-card"><strong>Caution:</strong> ${escapeHtml(caution)}</div>`)
+      );
+    }
+    if (!validation.issues.length && !validation.cautions.length) {
+      validationCards.push(`<div class="ok-card">No high-risk conflicts detected from selected regimen and entered patient context.</div>`);
+    }
+
+    validationEl.innerHTML = `<strong>Regimen Validation</strong>${validationCards.join("")}`;
+
+    if (!selectedDrugIds.length) {
+      detailsEl.innerHTML = "<strong>Medication Details</strong><p>No medications selected.</p>";
+      return;
+    }
+
+    detailsEl.innerHTML = `
+      <strong>Medication Details</strong>
+      ${selectedDrugIds
+        .map((drugId) => {
+          const d = DRUGS[drugId];
+          return `
+            <article class="drug-card">
+              <h4>${escapeHtml(d.name)}</h4>
+              <p class="detail-row"><strong>Class:</strong> ${escapeHtml(CLASS_LABELS[d.classId])}</p>
+              <p class="detail-row"><strong>Route:</strong> ${escapeHtml(d.route)}</p>
+              <p class="detail-row"><strong>Start dose:</strong> ${escapeHtml(d.startDose)}</p>
+              <p class="detail-row"><strong>Goal/titration:</strong> ${escapeHtml(d.goalDose)}</p>
+              <p class="detail-row"><strong>Monitoring:</strong> ${escapeHtml(d.monitoring)}</p>
+              <p class="detail-row"><strong>Key interactions:</strong> ${escapeHtml(d.interactions)}</p>
+              <p class="detail-row"><strong>Renal considerations:</strong> ${escapeHtml(d.renal)}</p>
+              <p class="detail-row"><strong>Hepatic considerations:</strong> ${escapeHtml(d.hepatic)}</p>
+              <p class="detail-row"><strong>Pregnancy considerations:</strong> ${escapeHtml(d.pregnancy)}</p>
+            </article>
+          `;
+        })
+        .join("")}
+    `;
   });
 }
 
@@ -2467,14 +1635,8 @@ function init() {
   const egfrInput = document.querySelector("input[name='egfr']");
   const renalStatusSelect = document.querySelector("select[name='renalStatus']");
   const riskScoreInputs = document.getElementById("risk-score-inputs");
-  const clinicalPolicyLayer = document.getElementById("clinical-policy-layer");
-  const currentRegimenFieldset = document.getElementById("current-regimen-fieldset");
-  const currentRegimenOptions = document.getElementById("current-regimen-options");
   const riskModelSelect = document.getElementById("risk-model");
-  const advancedRiskDetails = document.getElementById("advanced-risk-details");
-  const riskModelFields = Array.prototype.slice.call(document.querySelectorAll(".risk-model-field, .quick-risk-field"));
-  const advancedRiskFields = Array.prototype.slice.call(document.querySelectorAll(".advanced-risk-field"));
-  const quickFillButtons = Array.prototype.slice.call(document.querySelectorAll(".segment-btn"));
+  const riskModelFields = Array.prototype.slice.call(document.querySelectorAll(".risk-model-field"));
 
   if (!form) {
     return false;
@@ -2487,8 +1649,7 @@ function init() {
 
   const riskModelOptionsByStage = {
     initial: [
-      { value: "reveal20_initial", label: "REVEAL 2.0" },
-      { value: "escers_simplified_initial", label: "ESC/ERS Simplified 3-Variable Baseline" }
+      { value: "reveal20_initial", label: "REVEAL 2.0" }
     ],
     follow_up: [
       { value: "reveal_lite2_followup", label: "REVEAL Lite 2" },
@@ -2513,44 +1674,6 @@ function init() {
     }
   };
 
-  const setFieldsetVisibility = (fieldset, show) => {
-    if (!fieldset) {
-      return;
-    }
-    if (show) {
-      fieldset.classList.remove("is-hidden");
-    } else {
-      fieldset.classList.add("is-hidden");
-    }
-    const controls = fieldset.querySelectorAll("input, select, textarea, button");
-    for (let i = 0; i < controls.length; i += 1) {
-      controls[i].disabled = !show;
-    }
-  };
-
-  const renderCurrentRegimenOptions = () => {
-    if (!currentRegimenOptions) {
-      return;
-    }
-    currentRegimenOptions.innerHTML = sortDrugIdsAlphabetically(FOLLOW_UP_REGIMEN_DRUG_IDS)
-      .map((drugId) => {
-        const drug = DRUGS[drugId];
-        if (!drug) {
-          return "";
-        }
-        return `
-          <label class="modifier-item">
-            <input type="checkbox" name="currentRegimenDrugIds" value="${escapeHtml(drug.id)}" />
-            <span>
-              <strong>${escapeHtml(drug.name)}</strong>
-              <small>${escapeHtml(CLASS_LABELS[drug.classId])}</small>
-            </span>
-          </label>
-        `;
-      })
-      .join("");
-  };
-
   const updateRiskModelFieldVisibility = () => {
     if (!riskModelSelect) {
       return;
@@ -2569,25 +1692,14 @@ function init() {
         controls[i].disabled = !showField;
       }
     });
-    renderRiskStrataTiles(selectedModel);
-    if (advancedRiskDetails) {
-      const hasVisibleAdvancedFields = advancedRiskFields.some((field) => !field.classList.contains("is-hidden"));
-      if (hasVisibleAdvancedFields) {
-        advancedRiskDetails.classList.remove("is-hidden");
-      } else {
-        advancedRiskDetails.classList.add("is-hidden");
-        advancedRiskDetails.open = false;
-      }
-    }
   };
 
   const updateRiskInputsVisibility = () => {
     if (!whoGroupSelect || !riskScoreInputs || !riskModelSelect) {
       return;
     }
-    const showGroup1 = whoGroupSelect.value === "1";
-    const showFollowupRegimen = showGroup1 && assessmentStageSelect && assessmentStageSelect.value === "follow_up";
-    if (showGroup1) {
+    const show = whoGroupSelect.value === "1";
+    if (show) {
       riskScoreInputs.classList.remove("is-hidden");
       setRiskModelOptions();
       riskModelSelect.disabled = false;
@@ -2599,8 +1711,6 @@ function init() {
         controls[i].disabled = true;
       }
     }
-    setFieldsetVisibility(clinicalPolicyLayer, showGroup1);
-    setFieldsetVisibility(currentRegimenFieldset, showFollowupRegimen);
   };
 
   const syncRenalStatusFromEgfr = () => {
@@ -2615,214 +1725,21 @@ function init() {
     renalStatusSelect.value = mappedStatus;
   };
 
-  const getQuickCategoryFromValue = (targetName, value) => {
-    if (value === null || value === undefined) {
-      return "";
-    }
-    if (targetName === "heartRate") {
-      return value > 96 ? "gt96" : "lte96";
-    }
-    if (targetName === "systolicBp") {
-      return value < 110 ? "lt110" : "gte110";
-    }
-    if (targetName === "walkDistance") {
-      if (value > 440) return "gt440";
-      if (value >= 320) return "320to440";
-      if (value >= 165) return "165to319";
-      return "lt165";
-    }
-    if (targetName === "bnp") {
-      if (value < 50) return "lt50";
-      if (value <= 199) return "50to199";
-      if (value <= 799) return "200to799";
-      return "gte800";
-    }
-    if (targetName === "ntProbnp") {
-      if (value < 300) return "lt300";
-      if (value <= 649) return "300to649";
-      if (value <= 1100) return "650to1100";
-      return "gt1100";
-    }
-    if (targetName === "egfr") {
-      if (value >= 60) return "gte60";
-      if (value >= 30) return "30to59";
-      return "lt30";
-    }
-    if (targetName === "dlcoPercentPred") {
-      return value < 40 ? "lt40" : "gte40";
-    }
-    if (targetName === "mrap") {
-      return value > 20 ? "gt20" : "lte20";
-    }
-    if (targetName === "PVR") {
-      return value < 5 ? "lt5" : "gte5";
-    }
-    return "";
-  };
-
-  const getQuickButtonTarget = (button) => {
-    if (!button) {
-      return "";
-    }
-    const parentGroup = button.closest(".segment-group");
-    if (parentGroup && parentGroup.getAttribute("data-target")) {
-      return parentGroup.getAttribute("data-target");
-    }
-    return button.getAttribute("data-quick-fill-target")
-      || button.getAttribute("data-fill-target")
-      || button.getAttribute("data-select-target")
-      || "";
-  };
-
-  const getQuickCategoryFromState = (targetName) => {
-    if (targetName === "whoFc") {
-      const selectEl = document.querySelector(`[name='${targetName}']`);
-      return selectEl ? selectEl.value : "";
-    }
-
-    if (["pahSubgroup", "maleOver60", "recentHospitalization", "pericardialEffusion"].includes(targetName)) {
-      const hiddenEl = document.querySelector(`[name='${targetName}']`);
-      if (!hiddenEl) {
-        return "";
-      }
-      return hiddenEl.value || "";
-    }
-
-    const inputEl = document.querySelector(`[name='${targetName}']`);
-    const numericValue = inputEl ? toNumber(inputEl.value) : null;
-    return numericValue === null ? "" : getQuickCategoryFromValue(targetName, numericValue);
-  };
-
-  const syncQuickFillButtonsForTarget = (targetName) => {
-    const hiddenCategoryEl = document.querySelector(`[name='${targetName}Category']`);
-    const activeCategory = getQuickCategoryFromState(targetName);
-    if (hiddenCategoryEl) {
-      hiddenCategoryEl.value = activeCategory;
-    }
-    quickFillButtons.forEach((button) => {
-      if (getQuickButtonTarget(button) !== targetName) {
-        return;
-      }
-      if (button.getAttribute("data-category-value") === activeCategory) {
-        button.classList.add("is-active");
-      } else {
-        button.classList.remove("is-active");
-      }
-    });
-  };
-
-  const bindQuickFillButtons = () => {
-    quickFillButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const targetName = getQuickButtonTarget(button);
-        const currentCategory = targetName ? getQuickCategoryFromState(targetName) : "";
-        const clickedCategory = button.getAttribute("data-category-value") || "";
-        const fillTargetName = button.getAttribute("data-fill-target") || button.getAttribute("data-quick-fill-target");
-        const inputEl = fillTargetName ? document.querySelector(`[name='${fillTargetName}']`) : null;
-        const selectTargetName = button.getAttribute("data-select-target");
-        const selectEl = selectTargetName ? document.querySelector(`[name='${selectTargetName}']`) : null;
-        const hiddenCategoryName = button.getAttribute("data-category-target");
-        const hiddenCategoryEl = hiddenCategoryName ? document.querySelector(`[name='${hiddenCategoryName}']`) : null;
-
-        if (clickedCategory && clickedCategory === currentCategory) {
-          if (inputEl) {
-            inputEl.value = "";
-          }
-          if (selectEl) {
-            selectEl.value = "";
-          }
-          if (hiddenCategoryEl) {
-            hiddenCategoryEl.value = "";
-          }
-        } else {
-          if (inputEl) {
-            inputEl.value = button.getAttribute("data-fill-value") || "";
-          }
-          if (selectEl) {
-            selectEl.value = button.getAttribute("data-select-value") || "";
-          }
-          if (hiddenCategoryEl) {
-            hiddenCategoryEl.value = clickedCategory;
-          }
-        }
-
-        if (fillTargetName === "egfr") {
-          syncRenalStatusFromEgfr();
-        }
-        if (targetName) {
-          syncQuickFillButtonsForTarget(targetName);
-        }
-        const preview = getLiveRiskPreview(parseInput(new FormData(form)));
-        updateRiskStrataHighlight(preview.label, preview.modelId);
-      });
-    });
-
-    const quickTargetBindings = {
-      whoFc: ["whoFc"],
-      pahSubgroup: ["pahSubgroup"],
-      maleOver60: ["maleOver60"],
-      egfr: ["egfr"],
-      heartRate: ["heartRate"],
-      systolicBp: ["systolicBp"],
-      recentHospitalization: ["recentHospitalization"],
-      walkDistance: ["walkDistance"],
-      bnp: ["bnp"],
-      ntProbnp: ["ntProbnp"],
-      pericardialEffusion: ["pericardialEffusion"],
-      dlcoPercentPred: ["dlcoPercentPred"],
-      mrap: ["mrap"],
-      PVR: ["PVR"]
-    };
-
-    Object.keys(quickTargetBindings).forEach((targetName) => {
-      quickTargetBindings[targetName].forEach((sourceName) => {
-        const sourceEl = document.querySelector(`[name='${sourceName}']`);
-        if (!sourceEl) {
-          return;
-        }
-        sourceEl.addEventListener("input", () => syncQuickFillButtonsForTarget(targetName));
-        sourceEl.addEventListener("change", () => syncQuickFillButtonsForTarget(targetName));
-      });
-      syncQuickFillButtonsForTarget(targetName);
-    });
-  };
-
-  const updateLiveRiskPreview = () => {
-    const preview = getLiveRiskPreview(parseInput(new FormData(form)));
-    updateRiskStrataHighlight(preview.label, preview.modelId);
-  };
-
-  renderCurrentRegimenOptions();
   updateRiskInputsVisibility();
-  setResultsPanelState(false, false);
   syncRenalStatusFromEgfr();
-  bindQuickFillButtons();
-  bindResultsPanelControls();
-  updateLiveRiskPreview();
   if (whoGroupSelect) {
-    whoGroupSelect.addEventListener("change", () => {
-      updateRiskInputsVisibility();
-      updateLiveRiskPreview();
-    });
+    whoGroupSelect.addEventListener("change", updateRiskInputsVisibility);
   }
   if (assessmentStageSelect) {
-    assessmentStageSelect.addEventListener("change", () => {
-      updateRiskInputsVisibility();
-      updateLiveRiskPreview();
-    });
+    assessmentStageSelect.addEventListener("change", updateRiskInputsVisibility);
   }
   if (riskModelSelect) {
-    riskModelSelect.addEventListener("change", () => {
-      updateRiskModelFieldVisibility();
-      updateLiveRiskPreview();
-    });
+    riskModelSelect.addEventListener("change", updateRiskModelFieldVisibility);
   }
   if (egfrInput) {
     egfrInput.addEventListener("input", syncRenalStatusFromEgfr);
     egfrInput.addEventListener("change", syncRenalStatusFromEgfr);
   }
-  form.addEventListener("input", updateLiveRiskPreview);
-  form.addEventListener("change", updateLiveRiskPreview);
 
   return true;
 }
@@ -2830,7 +1747,6 @@ function init() {
 function bootApp(attempt) {
   const currentAttempt = typeof attempt === "number" ? attempt : 0;
   bindGlobalFormHandlers();
-  renderAppMetadata();
   const form = document.getElementById("patient-form");
   if (window.__PH_APP_READY && form && form.dataset.phBound === "1") {
     return;

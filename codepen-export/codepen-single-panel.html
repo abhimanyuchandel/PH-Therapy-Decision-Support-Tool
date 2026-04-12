@@ -1,3 +1,1188 @@
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+:root {
+  --ink: #132534;
+  --ink-soft: #2b475d;
+  --paper: #f7f4ec;
+  --panel: rgba(255, 255, 255, 0.82);
+  --accent: #06767c;
+  --accent-strong: #055258;
+  --warn: #a33d2a;
+  --ok: #0f6f40;
+  --line: #d4ddd7;
+  --shadow: 0 18px 40px rgba(19, 37, 52, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 8%, #f4f0e7 0%, #edf3ef 46%, #e6f0f2 100%);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+.bg-orb {
+  position: fixed;
+  width: 26rem;
+  height: 26rem;
+  border-radius: 50%;
+  filter: blur(30px);
+  pointer-events: none;
+  opacity: 0.35;
+  z-index: -1;
+}
+
+.orb-a {
+  top: -8rem;
+  left: -5rem;
+  background: #d5ece6;
+}
+
+.orb-b {
+  right: -8rem;
+  bottom: -6rem;
+  background: #f3dfcd;
+}
+
+.layout {
+  width: min(1200px, 94vw);
+  margin: 2.2rem auto 3rem;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.column-stack {
+  display: grid;
+  gap: 1.1rem;
+  align-content: start;
+}
+
+.column-primary,
+.column-secondary {
+  min-width: 0;
+}
+
+.hero,
+.panel {
+  background: var(--panel);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.hero {
+  grid-column: 1 / -1;
+  padding: 1.5rem 1.6rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+h1 {
+  font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
+  margin: 0.45rem 0 0.55rem;
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
+  line-height: 1.03;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--ink-soft);
+  max-width: 72ch;
+}
+
+.panel {
+  padding: 1.2rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
+  font-size: 1.25rem;
+}
+
+.panel-note {
+  color: var(--ink-soft);
+  margin-top: -0.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.94rem;
+}
+
+.form-message {
+  display: none;
+  margin-bottom: 0.8rem;
+  border-left: 4px solid var(--warn);
+  background: #fff7f4;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.form-message.show {
+  display: block;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.full-span {
+  grid-column: 1 / -1;
+}
+
+.is-hidden {
+  display: none;
+}
+
+.risk-model-field.is-hidden {
+  display: none;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--ink-soft);
+  font-size: 0.87rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffefb;
+  color: var(--ink);
+  padding: 0.52rem 0.62rem;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: var(--accent);
+}
+
+.checkbox-row {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0.6rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ink);
+}
+
+.input-help {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  margin-top: -0.05rem;
+}
+
+.modifier-group {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffefb;
+  padding: 0.75rem;
+  margin: 0;
+}
+
+.modifier-group legend {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.92rem;
+  padding: 0 0.35rem;
+}
+
+.modifier-intro {
+  margin: 0 0 0.6rem;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+.modifier-grid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.modifier-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: start;
+  gap: 0.55rem;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0.55rem 0.6rem;
+  color: var(--ink);
+}
+
+.modifier-item input {
+  margin-top: 0.18rem;
+}
+
+.modifier-item strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.modifier-item small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  margin-top: 0.2rem;
+}
+
+.primary-btn {
+  grid-column: 1 / -1;
+  border: 0;
+  border-radius: 12px;
+  padding: 0.72rem 1rem;
+  background: linear-gradient(130deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  filter: brightness(1.07);
+}
+
+.result-block {
+  border-top: 1px solid var(--line);
+  padding-top: 0.82rem;
+  margin-top: 0.82rem;
+}
+
+.result-block:empty {
+  display: none;
+}
+
+.results-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.results-note {
+  margin-bottom: 0;
+}
+
+.results-actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.results-panel[data-has-results="0"] .results-actions {
+  display: none;
+}
+
+.results-panel[data-collapsed="1"] #results-body {
+  display: none;
+}
+
+.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.62rem 0.9rem;
+  background: #fffefb;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: #f3f8f8;
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.alert-card {
+  border-left: 4px solid var(--warn);
+  background: #fff7f4;
+  padding: 0.6rem 0.72rem;
+  border-radius: 8px;
+  margin-bottom: 0.55rem;
+}
+
+.ok-card {
+  border-left: 4px solid var(--ok);
+  background: #f1fbf5;
+  padding: 0.6rem 0.72rem;
+  border-radius: 8px;
+  margin-bottom: 0.55rem;
+}
+
+.risk-table-wrap {
+  margin-top: 0.7rem;
+  overflow-x: auto;
+}
+
+.risk-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+  font-size: 0.86rem;
+  background: #fffefb;
+}
+
+.risk-table th,
+.risk-table td {
+  border: 1px solid var(--line);
+  padding: 0.42rem 0.48rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.risk-table th {
+  background: #eef7f5;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.quick-risk-shell {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.risk-strata-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.6rem;
+}
+
+.risk-strata-tile {
+  border-radius: 12px;
+  padding: 0.8rem;
+  border: 1px solid transparent;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.risk-strata-tile strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.92rem;
+}
+
+.risk-strata-tile small {
+  color: var(--ink-soft);
+  display: block;
+  line-height: 1.35;
+}
+
+.risk-strata-tile.is-active {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent-strong) 50%, rgba(19, 37, 52, 0.18));
+  box-shadow: 0 10px 22px rgba(6, 118, 124, 0.16);
+}
+
+.risk-strata-tile.is-active strong {
+  color: var(--accent-strong);
+}
+
+.risk-strata-meta {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.risk-low {
+  background: #eef9f1;
+}
+
+.risk-intermediate-low {
+  background: #f6f5df;
+}
+
+.risk-intermediate-high {
+  background: #f7ead7;
+}
+
+.risk-high {
+  background: #fae1dc;
+}
+
+.quick-risk-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.quick-risk-field {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffefb;
+  padding: 0.7rem;
+}
+
+.quick-risk-label {
+  display: block;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 600;
+  margin-bottom: 0.45rem;
+}
+
+.segment-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.segment-btn {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.42rem 0.72rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.segment-btn.is-active {
+  border-color: var(--accent-strong);
+  background: #ebf7f7;
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.advanced-risk-details {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.advanced-risk-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+}
+
+.advanced-risk-details[open] summary {
+  margin-bottom: 0.9rem;
+}
+
+.reco-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.reco-card {
+  background: #fffefb;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.72rem;
+}
+
+.reco-card h4 {
+  margin-top: 0;
+  margin-bottom: 0.45rem;
+  font-size: 1rem;
+}
+
+.reco-card p {
+  margin: 0.35rem 0;
+  color: var(--ink-soft);
+}
+
+.primary-reco-card {
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(19, 37, 52, 0.08);
+  box-shadow: 0 12px 24px rgba(19, 37, 52, 0.06);
+}
+
+.primary-reco-card p {
+  margin: 0.45rem 0 0;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.primary-reco-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tone-low {
+  background: #eef9f1;
+  color: #0f6f40;
+}
+
+.tone-intermediate {
+  background: #f6f5df;
+  color: #786800;
+}
+
+.tone-high {
+  background: #fae1dc;
+  color: #a33d2a;
+}
+
+.tone-neutral {
+  background: #edf2f5;
+  color: var(--ink-soft);
+}
+
+.drug-card {
+  border: 1px solid var(--line);
+  background: #fffefb;
+  border-radius: 10px;
+  padding: 0.82rem;
+  margin-bottom: 0.75rem;
+}
+
+.drug-card h4 {
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+}
+
+.detail-row {
+  margin: 0.33rem 0;
+  font-size: 0.92rem;
+}
+
+.selector-group {
+  margin-bottom: 0.78rem;
+  padding: 0.7rem;
+  background: #fffefb;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.selector-group h4 {
+  margin: 0 0 0.4rem;
+}
+
+.selector-group small {
+  display: block;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+
+.selector-option {
+  display: block;
+  margin: 0.3rem 0;
+  font-size: 0.92rem;
+}
+
+.validate-btn {
+  border: 1px solid var(--accent-strong);
+  color: var(--accent-strong);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.validate-btn:hover {
+  background: #eff9f9;
+}
+
+.guardrails ul {
+  padding-left: 1.1rem;
+  margin-top: 0.4rem;
+}
+
+.guardrails li {
+  margin-bottom: 0.45rem;
+}
+
+.disclaimer {
+  margin-top: 0.85rem;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+
+.references-drawer summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.reference-list {
+  margin-bottom: 0;
+}
+
+.panel a {
+  color: var(--accent-strong);
+}
+
+.app-meta {
+  width: min(1200px, 94vw);
+  margin: -1.4rem auto 2.2rem;
+  padding: 0 0.25rem;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.app-meta p {
+  margin: 0.2rem 0;
+}
+
+.app-meta strong {
+  color: var(--ink);
+}
+
+@media (max-width: 1080px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .column-stack {
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1081px) {
+  .layout {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: start;
+  }
+}
+
+@media (max-width: 760px) {
+  .results-actions {
+    width: 100%;
+  }
+
+  .secondary-btn {
+    flex: 1 1 0;
+  }
+
+  .primary-reco-topline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <main class="layout">
+    <header class="hero">
+      <p class="eyebrow">Clinical Decision Support Prototype</p>
+      <h1>PH Therapy Navigator</h1>
+      <p class="subtitle">
+        Structured support for when to initiate or escalate pulmonary hypertension therapy,
+        with score-driven recommendations and medication-level safety context.
+      </p>
+    </header>
+
+    <div class="column-stack column-primary">
+    <section class="panel input-panel">
+      <h2>Patient Inputs</h2>
+      <p class="panel-note">Enter available data. The tool computes hemodynamics and risk strata, then proposes therapy options.</p>
+
+      <div id="form-message" class="form-message"></div>
+
+      <form id="patient-form" class="form-grid">
+        <label>
+          Assessment moment
+          <select name="assessmentStage" required>
+            <option value="initial">Initial therapy decision</option>
+            <option value="follow_up">Follow-up escalation decision</option>
+          </select>
+        </label>
+
+        <label>
+          WHO clinical group
+          <select name="whoGroup" required>
+            <option value="1">Group 1 (PAH)</option>
+            <option value="2">Group 2 (PH-LHD)</option>
+            <option value="3">Group 3 (lung disease/hypoxia)</option>
+            <option value="4">Group 4 (CTEPH/CTEPD)</option>
+            <option value="5">Group 5 (multifactorial/other)</option>
+          </select>
+        </label>
+
+        <label>
+          mPAP (mmHg)
+          <input type="number" name="mPAP" min="0" step="0.1" required />
+        </label>
+
+        <label>
+          PAWP (mmHg)
+          <input type="number" name="PAWP" min="0" step="0.1" required />
+        </label>
+
+        <label>
+          PVR (WU)
+          <input type="number" name="PVR" min="0" step="0.1" required />
+        </label>
+
+        <label>
+          WHO functional class
+          <select name="whoFc" required>
+            <option value="">Select class</option>
+            <option value="I">I</option>
+            <option value="II">II</option>
+            <option value="III">III</option>
+            <option value="IV">IV</option>
+          </select>
+          <small class="input-help">Class I: no limitation. Class II: slight limitation. Class III: marked limitation. Class IV: symptoms at rest or with minimal activity.</small>
+        </label>
+
+        <label>
+          6MWD (meters)
+          <input type="number" name="walkDistance" min="0" step="1" />
+        </label>
+
+        <label>
+          BNP (pg/mL)
+          <input type="number" name="bnp" min="0" step="1" />
+          <small class="input-help">Usual non-acute reference is often &lt;100 pg/mL (lab-dependent).</small>
+        </label>
+
+        <label>
+          NT-proBNP (ng/L)
+          <input type="number" name="ntProbnp" min="0" step="1" />
+          <small class="input-help">Usual non-acute reference is often &lt;125 ng/L (&lt;75 years) or &lt;450 ng/L (>=75 years), lab-dependent.</small>
+        </label>
+
+        <label>
+          Systolic BP (mmHg)
+          <input type="number" name="systolicBp" min="0" step="1" />
+        </label>
+
+        <label>
+          Platelets (x10^3/uL)
+          <input type="number" name="platelets" min="0" max="1000" step="1" />
+          <small class="input-help">Enter 0-1000. Example: 250 means 250,000/mm3.</small>
+        </label>
+
+        <fieldset class="modifier-group full-span" id="risk-score-inputs">
+          <legend>Risk Score Inputs (WHO Group 1 only)</legend>
+          <p class="modifier-intro">Choose a risk model, then use quick-click categories or exact values. Available options change by assessment stage.</p>
+
+          <label class="full-span">
+            Score strategy
+            <select name="riskModel" id="risk-model"></select>
+            <small class="input-help">Initial: REVEAL 2.0 or simplified ESC/ERS-style 3-variable baseline estimate. Follow-up: REVEAL Lite 2, COMPERA 2.0 4-risk strata, or French noninvasive criteria.</small>
+          </label>
+
+          <div class="quick-risk-shell full-span">
+            <div class="risk-strata-grid" id="risk-strata-grid" aria-label="Risk tier reference" aria-live="polite"></div>
+
+            <div class="quick-risk-grid">
+              <div class="quick-risk-field" data-models="reveal20_initial,escers_simplified_initial,reveal_lite2_followup,compera20_followup,french_noninvasive_followup">
+                <span class="quick-risk-label">WHO functional class</span>
+                <div class="segment-group" data-target="whoFc">
+                  <button type="button" class="segment-btn" data-select-target="whoFc" data-select-value="I" data-category-value="I">Class I</button>
+                  <button type="button" class="segment-btn" data-select-target="whoFc" data-select-value="II" data-category-value="II">Class II</button>
+                  <button type="button" class="segment-btn" data-select-target="whoFc" data-select-value="III" data-category-value="III">Class III</button>
+                  <button type="button" class="segment-btn" data-select-target="whoFc" data-select-value="IV" data-category-value="IV">Class IV</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial">
+                <span class="quick-risk-label">PAH subgroup</span>
+                <input type="hidden" name="pahSubgroup" />
+                <div class="segment-group" data-target="pahSubgroup">
+                  <button type="button" class="segment-btn" data-fill-target="pahSubgroup" data-fill-value="other" data-category-value="other">Other / idiopathic</button>
+                  <button type="button" class="segment-btn" data-fill-target="pahSubgroup" data-fill-value="ctd" data-category-value="ctd">CTD-PAH</button>
+                  <button type="button" class="segment-btn" data-fill-target="pahSubgroup" data-fill-value="heritable" data-category-value="heritable">Heritable</button>
+                  <button type="button" class="segment-btn" data-fill-target="pahSubgroup" data-fill-value="poph" data-category-value="poph">PoPH</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial">
+                <span class="quick-risk-label">Age / sex</span>
+                <input type="hidden" name="maleOver60" />
+                <div class="segment-group" data-target="maleOver60">
+                  <button type="button" class="segment-btn" data-fill-target="maleOver60" data-fill-value="yes" data-category-value="yes">Male &gt;60 years of age</button>
+                </div>
+                <small class="input-help">If not selected, REVEAL assumes the patient is not a male older than 60 years.</small>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial,reveal_lite2_followup">
+                <span class="quick-risk-label">Renal status</span>
+                <div class="segment-group" data-target="egfr">
+                  <button type="button" class="segment-btn" data-fill-target="egfr" data-fill-value="75" data-category-value="gte60">eGFR &ge;60</button>
+                  <button type="button" class="segment-btn" data-fill-target="egfr" data-fill-value="45" data-category-value="30to59">eGFR 30-59</button>
+                  <button type="button" class="segment-btn" data-fill-target="egfr" data-fill-value="20" data-category-value="lt30">eGFR &lt;30</button>
+                </div>
+                <small class="input-help">Clicking updates eGFR and the renal-status field below.</small>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial,reveal_lite2_followup">
+                <span class="quick-risk-label">Heart rate</span>
+                <input type="hidden" name="heartRateCategory" />
+                <div class="segment-group" data-target="heartRate">
+                  <button type="button" class="segment-btn" data-quick-fill-target="heartRate" data-category-target="heartRateCategory" data-category-value="lte96" data-fill-value="80">&le;96 bpm</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="heartRate" data-category-target="heartRateCategory" data-category-value="gt96" data-fill-value="100">&gt;96 bpm</button>
+                </div>
+                <small class="input-help">Clicking fills the exact heart-rate field used by REVEAL calculators.</small>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial,reveal_lite2_followup">
+                <span class="quick-risk-label">Systolic BP</span>
+                <input type="hidden" name="systolicBpCategory" />
+                <div class="segment-group" data-target="systolicBp">
+                  <button type="button" class="segment-btn" data-quick-fill-target="systolicBp" data-category-target="systolicBpCategory" data-category-value="gte110" data-fill-value="120">&ge;110</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="systolicBp" data-category-target="systolicBpCategory" data-category-value="lt110" data-fill-value="100">&lt;110</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial">
+                <span class="quick-risk-label">Hospitalization</span>
+                <input type="hidden" name="recentHospitalization" />
+                <div class="segment-group" data-target="recentHospitalization">
+                  <button type="button" class="segment-btn" data-fill-target="recentHospitalization" data-fill-value="no" data-category-value="no">No hospitalization</button>
+                  <button type="button" class="segment-btn" data-fill-target="recentHospitalization" data-fill-value="yes" data-category-value="yes">Hospitalized in prior 6 months</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial,escers_simplified_initial,reveal_lite2_followup,compera20_followup,french_noninvasive_followup">
+                <span class="quick-risk-label">6MWD</span>
+                <input type="hidden" name="walkDistanceCategory" />
+                <div class="segment-group" data-target="walkDistance">
+                  <button type="button" class="segment-btn" data-quick-fill-target="walkDistance" data-category-target="walkDistanceCategory" data-category-value="gt440" data-fill-value="460">&gt;440 m</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="walkDistance" data-category-target="walkDistanceCategory" data-category-value="320to440" data-fill-value="380">320-440 m</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="walkDistance" data-category-target="walkDistanceCategory" data-category-value="165to319" data-fill-value="240">165-319 m</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="walkDistance" data-category-target="walkDistanceCategory" data-category-value="lt165" data-fill-value="120">&lt;165 m</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial,escers_simplified_initial,reveal_lite2_followup,compera20_followup,french_noninvasive_followup">
+                <span class="quick-risk-label">BNP</span>
+                <input type="hidden" name="bnpCategory" />
+                <div class="segment-group" data-target="bnp">
+                  <button type="button" class="segment-btn" data-quick-fill-target="bnp" data-category-target="bnpCategory" data-category-value="lt50" data-fill-value="40">&lt;50</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="bnp" data-category-target="bnpCategory" data-category-value="50to199" data-fill-value="125">50-199</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="bnp" data-category-target="bnpCategory" data-category-value="200to799" data-fill-value="500">200-799</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="bnp" data-category-target="bnpCategory" data-category-value="gte800" data-fill-value="900">&ge;800</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial,escers_simplified_initial,reveal_lite2_followup,compera20_followup,french_noninvasive_followup">
+                <span class="quick-risk-label">NT-proBNP</span>
+                <input type="hidden" name="ntProbnpCategory" />
+                <div class="segment-group" data-target="ntProbnp">
+                  <button type="button" class="segment-btn" data-quick-fill-target="ntProbnp" data-category-target="ntProbnpCategory" data-category-value="lt300" data-fill-value="200">&lt;300</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="ntProbnp" data-category-target="ntProbnpCategory" data-category-value="300to649" data-fill-value="500">300-649</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="ntProbnp" data-category-target="ntProbnpCategory" data-category-value="650to1100" data-fill-value="900">650-1100</button>
+                  <button type="button" class="segment-btn" data-quick-fill-target="ntProbnp" data-category-target="ntProbnpCategory" data-category-value="gt1100" data-fill-value="1200">&gt;1100</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial">
+                <span class="quick-risk-label">Pericardial effusion</span>
+                <input type="hidden" name="pericardialEffusion" />
+                <div class="segment-group" data-target="pericardialEffusion">
+                  <button type="button" class="segment-btn" data-fill-target="pericardialEffusion" data-fill-value="no" data-category-value="no">No effusion</button>
+                  <button type="button" class="segment-btn" data-fill-target="pericardialEffusion" data-fill-value="yes" data-category-value="yes">Pericardial effusion</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial">
+                <span class="quick-risk-label">DLCO</span>
+                <div class="segment-group" data-target="dlcoPercentPred">
+                  <button type="button" class="segment-btn" data-fill-target="dlcoPercentPred" data-fill-value="55" data-category-value="gte40">DLCO &ge;40%</button>
+                  <button type="button" class="segment-btn" data-fill-target="dlcoPercentPred" data-fill-value="30" data-category-value="lt40">DLCO &lt;40%</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial">
+                <span class="quick-risk-label">mRAP</span>
+                <div class="segment-group" data-target="mrap">
+                  <button type="button" class="segment-btn" data-fill-target="mrap" data-fill-value="12" data-category-value="lte20">mRAP &le;20</button>
+                  <button type="button" class="segment-btn" data-fill-target="mrap" data-fill-value="24" data-category-value="gt20">mRAP &gt;20</button>
+                </div>
+              </div>
+
+              <div class="quick-risk-field" data-models="reveal20_initial">
+                <span class="quick-risk-label">PVR</span>
+                <div class="segment-group" data-target="PVR">
+                  <button type="button" class="segment-btn" data-fill-target="PVR" data-fill-value="4" data-category-value="lt5">PVR &lt;5 WU</button>
+                  <button type="button" class="segment-btn" data-fill-target="PVR" data-fill-value="8" data-category-value="gte5">PVR &ge;5 WU</button>
+                </div>
+                <small class="input-help">This fills the exact hemodynamic PVR field above.</small>
+              </div>
+            </div>
+          </div>
+
+          <details class="advanced-risk-details full-span" id="advanced-risk-details">
+            <summary>Advanced / exact values</summary>
+            <div class="modifier-grid">
+              <label class="risk-model-field advanced-risk-field" data-models="reveal20_initial,reveal_lite2_followup">
+                Heart rate (bpm)
+                <input type="number" name="heartRate" min="20" max="240" step="1" />
+              </label>
+
+              <label class="risk-model-field advanced-risk-field" data-models="reveal20_initial,reveal_lite2_followup">
+                eGFR (mL/min/1.73m2)
+                <input type="number" name="egfr" min="0" max="200" step="1" />
+              </label>
+
+              <label class="risk-model-field advanced-risk-field" data-models="reveal20_initial">
+                DLCO (% predicted)
+                <input type="number" name="dlcoPercentPred" min="0" max="150" step="1" />
+              </label>
+
+              <label class="risk-model-field advanced-risk-field" data-models="reveal20_initial">
+                Mean right atrial pressure (mRAP/RAP, mmHg)
+                <input type="number" name="mrap" min="0" max="40" step="1" />
+              </label>
+            </div>
+          </details>
+        </fieldset>
+
+        <fieldset class="modifier-group full-span" id="clinical-policy-layer">
+          <legend>Clinical Policy Layer</legend>
+          <p class="modifier-intro">This controls how the app places sotatercept/Winrevair within escalation pathways. The active policy version is shown below the application.</p>
+          <div class="modifier-grid">
+            <label>
+              Sotatercept placement mode
+              <select name="sotaterceptPlacementMode">
+                <option value="early_add_on">Early add-on when follow-up risk is not low</option>
+                <option value="conservative">Conservative (higher-risk branches only)</option>
+              </select>
+              <small class="input-help">Choose whether sotatercept is surfaced broadly after low-risk failure or held for higher-risk branches only.</small>
+            </label>
+          </div>
+        </fieldset>
+
+        <label>
+          Hepatic impairment
+          <select name="hepaticImpairment">
+            <option value="none">None known</option>
+            <option value="mild">Mild (Child-Pugh A)</option>
+            <option value="moderate">Moderate (Child-Pugh B)</option>
+            <option value="severe">Severe (Child-Pugh C)</option>
+          </select>
+        </label>
+
+        <label>
+          Renal status
+          <select name="renalStatus">
+            <option value="normal">Normal or mild (eGFR >=60 mL/min/1.73m2)</option>
+            <option value="moderate">Moderate (eGFR 30-59)</option>
+            <option value="severe">Severe (eGFR &lt;30 or dialysis)</option>
+          </select>
+          <small class="input-help">Used for broad medication safety flags. Auto-filled from eGFR in REVEAL models: >=60 normal/mild, 30-59 moderate, &lt;30 severe. Final dose decisions remain drug-specific.</small>
+        </label>
+
+        <fieldset class="modifier-group full-span is-hidden" id="current-regimen-fieldset">
+          <legend>Current Group 1 PAH Regimen</legend>
+          <p class="modifier-intro">Follow-up escalation only. Select ongoing therapies to tailor add-on or escalation recommendations.</p>
+          <div class="modifier-grid" id="current-regimen-options"></div>
+        </fieldset>
+
+        <fieldset class="modifier-group full-span">
+          <legend>Phenotype Modifiers</legend>
+          <p class="modifier-intro">Use these to adjust pathway selection when phenotype is atypical or condition-specific.</p>
+          <div class="modifier-grid">
+            <label class="modifier-item">
+              <input type="checkbox" name="cardiopulmonaryComorbidities" />
+              <span>
+                <strong>Major cardiopulmonary comorbidity phenotype</strong>
+                <small>Typical scenario: older/mixed phenotype with significant cardiac or lung comorbidity where monotherapy-first escalation is often safer.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="vasoreactivityEligible" />
+              <span>
+                <strong>Vasoreactivity testing indicated phenotype</strong>
+                <small>Use for IPAH/HPAH/drug-associated PAH scenarios where acute vasoreactivity testing is guideline-relevant.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="vasoreactivityPositive" />
+              <span>
+                <strong>Positive vasoreactivity test</strong>
+                <small>Use only if a formal vasoreactivity test was positive; this opens the high-dose CCB branch.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="ildAssociated" />
+              <span>
+                <strong>PH associated with ILD phenotype</strong>
+                <small>Enables the PH-ILD targeted pathway (for example inhaled treprostinil consideration).</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="severeIldPh" />
+              <span>
+                <strong>Severe ILD-PH phenotype</strong>
+                <small>Use with ILD-associated PH when severe disease is present; allows optional PH-center PDE5 consideration.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="rightHeartFailureSigns" />
+              <span>
+                <strong>Signs of right-heart failure</strong>
+                <small>Examples: worsening edema, ascites, elevated JVP, hepatomegaly, or decompensated RV failure features.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="volumeOverload" />
+              <span>
+                <strong>Clinical volume overload / congestion</strong>
+                <small>Triggers decongestion guidance (diuresis) with electrolyte/renal monitoring recommendations.</small>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="modifier-group full-span">
+          <legend>Safety and Interaction Modifiers</legend>
+          <p class="modifier-intro">These directly affect contraindication checks and medication filtering.</p>
+          <div class="modifier-grid">
+            <label class="modifier-item">
+              <input type="checkbox" name="pregnantOrTrying" />
+              <span>
+                <strong>Pregnant or trying to conceive</strong>
+                <small>Triggers pregnancy safety guardrails, including ERA/riociguat restrictions.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="onNitrates" />
+              <span>
+                <strong>Current nitrates or NO donor therapy</strong>
+                <small>Flags contraindications with PDE5 inhibitors and riociguat (for example nitroglycerin, isosorbide dinitrate, inhaled nitric oxide).</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="strongCyp2c8Inhibitor" />
+              <span>
+                <strong>On strong CYP2C8 inhibitor (for example gemfibrozil)</strong>
+                <small>Used for interaction hard-stops, especially for selexipag.</small>
+              </span>
+            </label>
+
+            <label class="modifier-item">
+              <input type="checkbox" name="onClopidogrel" />
+              <span>
+                <strong>On clopidogrel</strong>
+                <small>Adds selexipag dose-frequency caution in the validation step.</small>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="primary-btn">Generate Recommendation</button>
+      </form>
+    </section>
+
+    <section class="panel guardrails">
+      <h2>Embedded Guardrails</h2>
+      <ul>
+        <li>Blocks or flags guideline-discordant PAH therapy use in Group 2 and most Group 3 scenarios.</li>
+        <li>Flags high-risk contraindications (for example riociguat + PDE5 inhibitor; nitrates with PDE5/riociguat).</li>
+        <li>Highlights pregnancy-related restrictions for ERAs and riociguat.</li>
+        <li>Surfaces dose, route, titration, monitoring, and organ-function considerations for selected drugs.</li>
+      </ul>
+      <p class="disclaimer">
+        For clinician decision support only. Final prescribing decisions must use current product labeling,
+        local protocol, and specialist judgment.
+      </p>
+    </section>
+    </div>
+
+    <div class="column-stack column-secondary">
+    <section class="panel results-panel" id="results-panel" data-has-results="0" data-collapsed="0">
+      <div class="results-header">
+        <div>
+          <h2>Decision Output</h2>
+          <p class="panel-note results-note">Recommendations can be collapsed for viewing or cleared without resetting the patient form.</p>
+        </div>
+        <div class="results-actions" id="results-actions">
+          <button type="button" class="secondary-btn" id="toggle-results-btn" aria-expanded="true">Collapse</button>
+          <button type="button" class="secondary-btn" id="reset-results-btn">Reset</button>
+        </div>
+      </div>
+
+      <div id="results-body">
+        <div id="decision-summary" class="result-block muted">No analysis yet.</div>
+        <div id="primary-recommendation" class="result-block"></div>
+        <div id="alerts" class="result-block"></div>
+        <div id="action-items" class="result-block"></div>
+        <div id="monitoring-items" class="result-block"></div>
+        <div id="eligibility-checks" class="result-block"></div>
+        <div id="risk-transparency" class="result-block"></div>
+        <div id="recommendation-rationale" class="result-block"></div>
+
+        <div id="medication-selector" class="result-block"></div>
+        <div id="regimen-validation" class="result-block"></div>
+        <div id="medication-details" class="result-block"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>References &amp; Evidence</h2>
+      <details class="references-drawer">
+        <summary>Open references used to frame this build</summary>
+        <ul class="reference-list">
+          <li><a href="https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/761363s008lbl.pdf" target="_blank" rel="noreferrer">Sotatercept / Winrevair FDA label (2025 update)</a></li>
+          <li><a href="https://www.lung.org/getmedia/b613ee8b-c808-4646-9608-459499185602/PH-Guidelines_Nov2024.pdf" target="_blank" rel="noreferrer">American Lung Association / PHA guidance-to-guidelines document (Nov 2024)</a></li>
+          <li>Risk tool intent in this build: initial Group 1 uses REVEAL 2.0 or simplified ESC/ERS-style 3-variable baseline estimate; follow-up Group 1 uses REVEAL Lite 2, COMPERA 2.0 4-risk strata, or French noninvasive criteria.</li>
+        </ul>
+      </details>
+    </section>
+    </div>
+  </main>
+
+  <footer class="app-meta" aria-label="Application metadata">
+    <p><strong>Policy version:</strong> <span id="app-policy-version"></span></p>
+    <p><strong>Last updated:</strong> <span id="app-last-updated"></span></p>
+  </footer>
+
+<script>
 if (!Object.values) {
   Object.values = function values(obj) {
     return Object.keys(obj).map(function mapKey(key) {
@@ -2856,3 +4041,4 @@ if (document.readyState === "loading") {
 } else {
   bootApp();
 }
+</script>
