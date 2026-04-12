@@ -283,6 +283,17 @@ var CLINICAL_POLICY = {
   }
 };
 
+var IMPORTANT_CITATIONS = [
+  {
+    label: "Sotatercept / Winrevair FDA label (2025 update)",
+    href: "https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/761363s008lbl.pdf"
+  },
+  {
+    label: "American Lung Association / PHA guidance-to-guidelines document (Nov 2024)",
+    href: "https://www.lung.org/getmedia/b613ee8b-c808-4646-9608-459499185602/PH-Guidelines_Nov2024.pdf"
+  }
+];
+
 var RISK_STRATA_CONFIG = {
   reveal20_initial: [
     { tier: "low", title: "Low", note: "Initial low-risk profile.", meta: "REVEAL <=6" },
@@ -1204,12 +1215,8 @@ function getActivePolicy(input) {
 }
 
 function renderAppMetadata() {
-  const versionEl = document.getElementById("app-policy-version");
   const updatedEl = document.getElementById("app-last-updated");
 
-  if (versionEl) {
-    versionEl.textContent = CLINICAL_POLICY.guidelineVersion;
-  }
   if (updatedEl) {
     updatedEl.textContent = CLINICAL_POLICY.lastUpdated;
   }
@@ -2055,6 +2062,8 @@ function clearDecisionOutput() {
     "eligibility-checks",
     "risk-transparency",
     "recommendation-rationale",
+    "copyable-summary",
+    "decision-citations",
     "medication-selector",
     "regimen-validation",
     "medication-details"
@@ -2253,6 +2262,231 @@ function buildTableHtml(table, title) {
   `;
 }
 
+function buildKeyValueTableHtml(rows, title) {
+  if (!rows || !rows.length) {
+    return "";
+  }
+
+  return `
+    ${title ? `<strong>${escapeHtml(title)}</strong>` : ""}
+    <div class="score-table-wrap">
+      <table class="score-table">
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <th scope="row">${escapeHtml(row.label)}</th>
+              <td>${escapeHtml(row.value)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildCitationLinksHtml() {
+  return `
+    <strong>Key Citations</strong>
+    <ul class="citation-list">
+      ${IMPORTANT_CITATIONS.map((citation) => `
+        <li><a href="${escapeHtml(citation.href)}" target="_blank" rel="noreferrer">${escapeHtml(citation.label)}</a></li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getAssessmentStageLabel(assessmentStage) {
+  return assessmentStage === "follow_up" ? "Follow-up escalation decision" : "Initial therapy decision";
+}
+
+function getWhoGroupLabel(whoGroup) {
+  const labels = {
+    "1": "Group 1 (PAH)",
+    "2": "Group 2 (PH-LHD)",
+    "3": "Group 3 (lung disease/hypoxia)",
+    "4": "Group 4 (CTEPH/CTEPD)",
+    "5": "Group 5 (multifactorial/other)"
+  };
+  return labels[whoGroup] || `Group ${whoGroup || "--"}`;
+}
+
+function getActiveModifierLabels(input) {
+  const labels = [];
+  if (input.cardiopulmonaryComorbidities) labels.push("major cardiopulmonary comorbidity phenotype");
+  if (input.vasoreactivityEligible) labels.push("vasoreactivity testing indicated phenotype");
+  if (input.vasoreactivityPositive) labels.push("positive vasoreactivity test");
+  if (input.ildAssociated) labels.push("PH associated with ILD phenotype");
+  if (input.severeIldPh) labels.push("severe ILD-PH phenotype");
+  if (input.rightHeartFailureSigns) labels.push("signs of right-heart failure");
+  if (input.volumeOverload) labels.push("clinical volume overload / congestion");
+  if (input.pregnantOrTrying) labels.push("pregnant or trying to conceive");
+  if (input.onNitrates) labels.push("current nitrates or NO donor therapy");
+  if (input.strongCyp2c8Inhibitor) labels.push("strong CYP2C8 inhibitor");
+  if (input.onClopidogrel) labels.push("on clopidogrel");
+  return labels;
+}
+
+function buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugIds) {
+  const lines = [];
+  const combinedDrugIds = mergeDrugIds(currentRegimenDrugIds || [], selectedDrugIds || []);
+
+  if (combinedDrugIds.length) {
+    const combinedNames = combinedDrugIds.map((drugId) => DRUGS[drugId]).filter(Boolean).map((drug) => drug.name);
+    if (selectedDrugIds && selectedDrugIds.length) {
+      lines.push(`Validated regimen: ${combinedNames.join(", ")}.`);
+    } else if (currentRegimenDrugIds && currentRegimenDrugIds.length) {
+      lines.push(`Current regimen: ${combinedNames.join(", ")}.`);
+    }
+  }
+
+  if (decision.primaryRecommendation) {
+    lines.push(decision.primaryRecommendation);
+  }
+
+  decision.actions.slice(0, 4).forEach((action) => {
+    lines.push(action);
+  });
+
+  if (selectedDrugIds && selectedDrugIds.length) {
+    const selectedNames = sortDrugIdsAlphabetically(selectedDrugIds)
+      .map((drugId) => DRUGS[drugId])
+      .filter(Boolean)
+      .map((drug) => drug.name);
+    lines.push(`Selected medication choices: ${selectedNames.join(", ")}.`);
+  } else if (decision.selectionTargets.length) {
+    decision.selectionTargets.slice(0, 4).forEach((target) => {
+      const drugNames = target.drugIds.map((drugId) => DRUGS[drugId]).filter(Boolean).map((drug) => drug.name);
+      lines.push(`${target.label}: ${drugNames.join(", ")}.`);
+    });
+  }
+
+  return lines;
+}
+
+function buildCopyableSummaryText(decision, input, selectedDrugIds) {
+  const lines = [];
+  const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
+  const modifiers = getActiveModifierLabels(input);
+  const medicationPlanLines = buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugIds || []);
+
+  lines.push("PH Therapy Navigator Case Summary");
+  lines.push(`Assessment moment: ${getAssessmentStageLabel(input.assessmentStage)}`);
+  lines.push(`WHO clinical group: ${getWhoGroupLabel(input.whoGroup)}`);
+  lines.push(`Hemodynamics: ${decision.hemo.profile}. ${decision.hemo.detail}`);
+
+  if (input.whoFc) {
+    lines.push(`WHO functional class: ${input.whoFc}`);
+  }
+  if (input.walkDistance !== null) {
+    lines.push(`6MWD: ${Math.round(input.walkDistance)} m`);
+  }
+  if (input.bnp !== null) {
+    lines.push(`BNP: ${Math.round(input.bnp)} pg/mL`);
+  }
+  if (input.ntProbnp !== null) {
+    lines.push(`NT-proBNP: ${Math.round(input.ntProbnp)} ng/L`);
+  }
+
+  if (decision.risk && decision.risk.modelName) {
+    lines.push(`Risk model: ${decision.risk.modelName}`);
+    lines.push(`Risk tier: ${formatRiskLabel(decision.risk.label || "unknown")}`);
+    lines.push(`Total score: ${decision.risk.score === null || decision.risk.score === undefined ? "--" : Math.round(decision.risk.score)}`);
+  }
+
+  if (modifiers.length) {
+    lines.push(`Key modifiers: ${modifiers.join("; ")}.`);
+  }
+
+  lines.push("");
+  lines.push("Basic medication management plan:");
+  medicationPlanLines.forEach((line) => {
+    lines.push(`- ${line}`);
+  });
+
+  if (decision.monitoringSafety.length) {
+    lines.push("");
+    lines.push("Monitoring / safety:");
+    decision.monitoringSafety.slice(0, 4).forEach((item) => {
+      lines.push(`- ${item}`);
+    });
+  }
+
+  if (decision.alerts.length) {
+    lines.push("");
+    lines.push("Key guardrails:");
+    decision.alerts.slice(0, 4).forEach((alert) => {
+      lines.push(`- ${alert}`);
+    });
+  }
+
+  lines.push("");
+  lines.push("Key citations:");
+  IMPORTANT_CITATIONS.forEach((citation) => {
+    lines.push(`- ${citation.label}: ${citation.href}`);
+  });
+
+  return lines.join("\n");
+}
+
+function renderCopyableSummary(summaryEl, decision, input, selectedDrugIds) {
+  if (!summaryEl) {
+    return;
+  }
+
+  const summaryText = buildCopyableSummaryText(decision, input, selectedDrugIds || []);
+  const rowCount = Math.max(10, Math.min(24, summaryText.split("\n").length + 1));
+
+  summaryEl.innerHTML = `
+    <strong>Copyable Case Summary</strong>
+    <p class="copy-summary-note">Use this plain-text summary for notes, messages, or handoff documentation.</p>
+    <div class="copy-summary-actions">
+      <button type="button" class="secondary-btn" id="copy-case-summary-btn">Copy Summary</button>
+      <span class="copy-summary-status" id="copy-case-summary-status" aria-live="polite"></span>
+    </div>
+    <textarea id="copy-case-summary-text" class="copy-summary-text" rows="${rowCount}" readonly spellcheck="false">${escapeHtml(summaryText)}</textarea>
+  `;
+
+  const copyButton = document.getElementById("copy-case-summary-btn");
+  const copyText = document.getElementById("copy-case-summary-text");
+  const copyStatus = document.getElementById("copy-case-summary-status");
+
+  if (!copyButton || !copyText) {
+    return;
+  }
+
+  copyButton.addEventListener("click", () => {
+    const onSuccess = () => {
+      if (copyStatus) {
+        copyStatus.textContent = "Copied.";
+      }
+    };
+
+    const onFailure = () => {
+      if (copyStatus) {
+        copyStatus.textContent = "Select and copy manually.";
+      }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(copyText.value).then(onSuccess).catch(onFailure);
+      return;
+    }
+
+    try {
+      copyText.focus();
+      copyText.select();
+      const copied = document.execCommand("copy");
+      if (copied) {
+        onSuccess();
+      } else {
+        onFailure();
+      }
+    } catch (error) {
+      onFailure();
+    }
+  });
+}
+
 function renderDecision(decision) {
   const summaryEl = document.getElementById("decision-summary");
   const primaryEl = document.getElementById("primary-recommendation");
@@ -2262,13 +2496,21 @@ function renderDecision(decision) {
   const eligibilityEl = document.getElementById("eligibility-checks");
   const transparencyEl = document.getElementById("risk-transparency");
   const rationaleEl = document.getElementById("recommendation-rationale");
+  const copySummaryEl = document.getElementById("copyable-summary");
+  const citationsEl = document.getElementById("decision-citations");
   const selectorEl = document.getElementById("medication-selector");
   const validationEl = document.getElementById("regimen-validation");
   const detailsEl = document.getElementById("medication-details");
   const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
   const riskToneClass = getRiskToneClass(decision.risk.pathwayLabel || decision.risk.label);
-  const riskTableHtml = buildTableHtml(decision.riskTable);
-  const transparencyTableHtml = buildTableHtml(decision.transparencyTable, "Risk Tool Transparency");
+  const riskTableHtml = decision.riskTable
+    ? buildKeyValueTableHtml([
+      { label: "Model", value: decision.risk.modelName || "--" },
+      { label: "Risk Tier", value: formatRiskLabel(decision.risk.label || "unknown") },
+      { label: "Total Score", value: decision.risk.score === null || decision.risk.score === undefined ? "--" : Math.round(decision.risk.score) }
+    ])
+    : "";
+  const transparencyTableHtml = buildTableHtml(decision.transparencyTable);
 
   updateRiskStrataHighlight(decision.risk.label, decision.risk.modelId || getSelectedRiskModelFromUi());
   setResultsPanelState(true, false);
@@ -2315,11 +2557,20 @@ function renderDecision(decision) {
     ? `<strong>Eligibility Checks</strong><ul>${decision.eligibilityChecks.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
     : "";
 
-  transparencyEl.innerHTML = transparencyTableHtml;
+  transparencyEl.innerHTML = transparencyTableHtml
+    ? `
+      <details class="output-drawer">
+        <summary>Risk Tool Transparency</summary>
+        ${transparencyTableHtml}
+      </details>
+    `
+    : "";
 
   rationaleEl.innerHTML = decision.rationale.length
     ? `<strong>Rationale</strong><ul>${decision.rationale.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
     : "";
+  renderCopyableSummary(copySummaryEl, decision, window.__CURRENT_INPUT, []);
+  citationsEl.innerHTML = buildCitationLinksHtml();
 
   validationEl.innerHTML = "";
   detailsEl.innerHTML = "";
@@ -2331,10 +2582,11 @@ function renderDecision(decision) {
       ${buildRegimenSummaryHtml(currentRegimenDrugIds)}
     `;
     if (currentRegimenDrugIds.length) {
-      const input = window.__CURRENT_INPUT;
-      const validation = validateSelection(decision, input, currentRegimenDrugIds);
+    const input = window.__CURRENT_INPUT;
+    const validation = validateSelection(decision, input, currentRegimenDrugIds);
       validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, []);
       detailsEl.innerHTML = buildMedicationDetailsHtml(currentRegimenDrugIds, currentRegimenDrugIds, []);
+      renderCopyableSummary(copySummaryEl, decision, input, []);
     }
     return;
   }
@@ -2384,6 +2636,7 @@ function renderDecision(decision) {
 
     validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, selectedDrugIds);
     detailsEl.innerHTML = buildMedicationDetailsHtml(combinedDrugIds, currentRegimenDrugIds, selectedDrugIds);
+    renderCopyableSummary(copySummaryEl, decision, input, selectedDrugIds);
   });
 }
 

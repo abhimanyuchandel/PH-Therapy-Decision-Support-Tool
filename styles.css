@@ -365,6 +365,32 @@ select:focus {
   font-weight: 600;
 }
 
+.score-table-wrap {
+  margin-top: 0.7rem;
+}
+
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fffefb;
+  font-size: 0.9rem;
+}
+
+.score-table th,
+.score-table td {
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.score-table th {
+  width: 38%;
+  background: #eef7f5;
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .quick-risk-shell {
   display: grid;
   gap: 0.8rem;
@@ -643,6 +669,60 @@ select:focus {
   color: var(--ink);
 }
 
+.output-drawer {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffefb;
+  padding: 0.15rem 0.8rem 0.8rem;
+}
+
+.output-drawer summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink);
+  padding-top: 0.45rem;
+}
+
+.output-drawer[open] summary {
+  margin-bottom: 0.65rem;
+}
+
+.citation-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.citation-list li {
+  margin-bottom: 0.45rem;
+}
+
+.copy-summary-note {
+  margin: 0.35rem 0 0.75rem;
+  color: var(--ink-soft);
+}
+
+.copy-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.copy-summary-status {
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+.copy-summary-text {
+  width: 100%;
+  min-height: 12rem;
+  resize: vertical;
+  line-height: 1.45;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background: #fffefb;
+}
+
 .reference-list {
   margin-bottom: 0;
 }
@@ -708,6 +788,19 @@ select:focus {
 
   .selector-group {
     padding: 0.8rem 0.75rem;
+  }
+
+  .score-table th,
+  .score-table td {
+    padding: 0.55rem;
+  }
+
+  .copy-summary-actions {
+    align-items: stretch;
+  }
+
+  .copy-summary-actions .secondary-btn {
+    width: 100%;
   }
 
   .risk-table-wrap {
