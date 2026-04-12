@@ -285,12 +285,24 @@ var CLINICAL_POLICY = {
 
 var IMPORTANT_CITATIONS = [
   {
-    label: "Sotatercept / Winrevair FDA label (2025 update)",
-    href: "https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/761363s008lbl.pdf"
+    label: "2022 ESC/ERS Guidelines for the diagnosis and treatment of pulmonary hypertension",
+    href: "https://academic.oup.com/eurheartj/article/43/38/3618/6673929"
   },
   {
-    label: "American Lung Association / PHA guidance-to-guidelines document (Nov 2024)",
+    label: "2024 WSPH definition, classification and diagnosis of pulmonary hypertension",
+    href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11533989/"
+  },
+  {
+    label: "2024 WSPH treatment algorithm for pulmonary arterial hypertension",
+    href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11525349/"
+  },
+  {
+    label: "2024 ALA/PHA panel consensus: Reimagining the ESC/ERS 2022 Diagnostic and Treatment Guidelines",
     href: "https://www.lung.org/getmedia/b613ee8b-c808-4646-9608-459499185602/PH-Guidelines_Nov2024.pdf"
+  },
+  {
+    label: "Sotatercept / Winrevair FDA label (2025 update)",
+    href: "https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/761363s008lbl.pdf"
   }
 ];
 
@@ -390,6 +402,10 @@ function parseInput(formData) {
     bnpCategory: formData.get("bnpCategory"),
     ntProbnpCategory: formData.get("ntProbnpCategory"),
     currentRegimenDrugIds: formData.getAll("currentRegimenDrugIds").filter((id) => id && DRUGS[id]),
+    ctephOperability: formData.get("ctephOperability"),
+    ctephPersistentAfterPte: formData.get("ctephPersistentAfterPte"),
+    ctephBpaEligible: formData.get("ctephBpaEligible"),
+    ctephPvrGreaterThan4: formData.get("ctephPvrGreaterThan4"),
     recentHospitalization: toNullableBoolean(formData.get("recentHospitalization")),
     pericardialEffusion: toNullableBoolean(formData.get("pericardialEffusion")),
     cardiopulmonaryComorbidities: formData.get("cardiopulmonaryComorbidities") === "on",
@@ -1181,6 +1197,25 @@ function formatRiskLabel(label) {
   return label.replace(/_/g, " ");
 }
 
+function normalizeTextForComparison(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function uniqueTextList(values) {
+  const seen = {};
+  return (values || []).filter((value) => {
+    const key = normalizeTextForComparison(value);
+    if (!key || seen[key]) {
+      return false;
+    }
+    seen[key] = true;
+    return true;
+  });
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -1204,6 +1239,61 @@ function addMonitoringUnique(decision, item) {
 
 function setPrimaryRecommendation(decision, message) {
   decision.primaryRecommendation = message;
+}
+
+function dedupeSelectionTargets(targets) {
+  const seen = {};
+  return (targets || []).filter((target) => {
+    const key = [
+      normalizeTextForComparison(target.label),
+      (target.drugIds || []).join("|"),
+      target.min,
+      target.max
+    ].join("::");
+    if (seen[key]) {
+      return false;
+    }
+    seen[key] = true;
+    return true;
+  });
+}
+
+function getCondensedActionText(primaryRecommendation, action) {
+  if (!primaryRecommendation || !action || action.indexOf(":") === -1 || primaryRecommendation.indexOf(":") === -1) {
+    return action;
+  }
+
+  const primaryPrefix = primaryRecommendation.split(":")[0];
+  const actionPrefix = action.split(":")[0];
+  if (normalizeTextForComparison(primaryPrefix) !== normalizeTextForComparison(actionPrefix)) {
+    return action;
+  }
+
+  const remainder = action.slice(action.indexOf(":") + 1).trim();
+  if (!remainder) {
+    return action;
+  }
+
+  return remainder.charAt(0).toUpperCase() + remainder.slice(1);
+}
+
+function getDisplayActions(decision) {
+  const primaryKey = normalizeTextForComparison(decision.primaryRecommendation);
+  const condensed = (decision.actions || [])
+    .map((action) => getCondensedActionText(decision.primaryRecommendation, action))
+    .filter((action) => normalizeTextForComparison(action) !== primaryKey);
+  return uniqueTextList(condensed);
+}
+
+function normalizeDecisionOutput(decision) {
+  decision.summary = uniqueTextList(decision.summary);
+  decision.alerts = uniqueTextList(decision.alerts);
+  decision.actions = uniqueTextList(decision.actions);
+  decision.monitoringSafety = uniqueTextList(decision.monitoringSafety);
+  decision.eligibilityChecks = uniqueTextList(decision.eligibilityChecks);
+  decision.rationale = uniqueTextList(decision.rationale);
+  decision.selectionTargets = dedupeSelectionTargets(decision.selectionTargets);
+  return decision;
 }
 
 function getActivePolicy(input) {
@@ -1390,6 +1480,33 @@ function appendTransplantReferralRecommendation(decision, input, riskResult, pat
   }
 }
 
+function getCtephOperabilityLabel(value) {
+  const labels = {
+    not_assessed: "not yet assessed",
+    operable: "operable",
+    non_operable: "non-operable"
+  };
+  return labels[value] || "not yet assessed";
+}
+
+function getCtephPersistentAfterPteLabel(value) {
+  const labels = {
+    not_applicable: "not applicable / PTE not yet performed",
+    none_after_pte: "no residual PH after PTE",
+    persistent_recurrent: "persistent or recurrent PH after PTE"
+  };
+  return labels[value] || "not applicable / PTE not yet performed";
+}
+
+function getCtephBpaEligibleLabel(value) {
+  const labels = {
+    not_assessed: "not yet assessed",
+    yes: "yes",
+    no: "no"
+  };
+  return labels[value] || "not yet assessed";
+}
+
 function buildDecision(input) {
   const hemo = classifyHemodynamics(input);
   const risk = computeRisk(input);
@@ -1422,13 +1539,6 @@ function buildDecision(input) {
   decision.summary.push(`${hemo.profile}: ${hemo.detail}`);
 
   if (showPahRiskScores) {
-    decision.summary.push(`Sotatercept placement mode: ${formatRiskLabel(policy.sotaterceptPlacementMode)}.`);
-    decision.summary.push(`Risk model selected: ${risk.modelName}.`);
-    if (risk.label !== "unknown") {
-      decision.summary.push(`Risk tier from selected model: ${formatRiskLabel(risk.label)}.`);
-    } else {
-      decision.summary.push("Risk tier from selected model: unavailable (insufficient data).");
-    }
     decision.riskTable = {
       columns: ["Model", "Risk Tier", "Total Score"],
       rows: [[
@@ -1530,10 +1640,25 @@ function buildDecision(input) {
   }
 
   if (input.whoGroup === "4") {
-    setPrimaryRecommendation(decision, "CTEPH pathway: anticoagulation plus expert operability/BPA assessment is the main recommendation.");
-    decision.actions.push("Initiate/continue lifelong therapeutic anticoagulation unless contraindicated.");
-    decision.actions.push("Ensure CTEPH team evaluation for operability (PEA) and BPA candidacy.");
-    decision.actions.push("For inoperable or persistent/recurrent symptomatic PH after PEA, consider riociguat.");
+    const operability = input.ctephOperability || "not_assessed";
+    const persistentAfterPte = input.ctephPersistentAfterPte || "not_applicable";
+    const bpaEligible = input.ctephBpaEligible || "not_assessed";
+    const pvrGreaterThan4 = input.ctephPvrGreaterThan4 || "not_assessed";
+
+    decision.summary.push(`CTEPH operability: ${getCtephOperabilityLabel(operability)}.`);
+    if (operability === "operable") {
+      decision.summary.push(`Post-PTE status: ${getCtephPersistentAfterPteLabel(persistentAfterPte)}.`);
+    }
+    if (operability === "non_operable" || persistentAfterPte === "persistent_recurrent") {
+      decision.summary.push(`BPA eligibility: ${getCtephBpaEligibleLabel(bpaEligible)}.`);
+      if (bpaEligible === "yes") {
+        decision.summary.push(`PVR >4 WU before BPA sequencing: ${pvrGreaterThan4 === "yes" ? "yes" : (pvrGreaterThan4 === "no" ? "no" : "not yet entered")}.`);
+      }
+    }
+
+    setPrimaryRecommendation(decision, "CTEPH pathway: lifelong anticoagulation plus expert-center operability and BPA assessment guides next treatment steps.");
+    addActionUnique(decision, "Initiate/continue lifelong therapeutic anticoagulation unless contraindicated.");
+    addActionUnique(decision, "Ensure expert CTEPH team review for operability (PTE/PEA) and BPA candidacy.");
 
     decision.selectionTargets.push(
       buildSelectionTarget(
@@ -1546,18 +1671,67 @@ function buildDecision(input) {
       )
     );
 
-    decision.selectionTargets.push(
-      buildSelectionTarget(
-        "cteph_riociguat_optional",
-        "Optional CTEPH-targeted therapy",
-        "Riociguat option for inoperable/persistent disease after procedural assessment.",
-        ["riociguat"],
-        0,
-        1
-      )
-    );
+    if (operability === "not_assessed") {
+      setPrimaryRecommendation(decision, "CTEPH pathway: determine operability at an expert center before choosing PTE, BPA, or riociguat.");
+      addActionUnique(decision, "Complete multidisciplinary operability determination first; medical therapy should not replace expert procedural assessment.");
+    } else if (operability === "operable" && persistentAfterPte !== "persistent_recurrent") {
+      if (persistentAfterPte === "none_after_pte") {
+        setPrimaryRecommendation(decision, "Post-PTE without residual PH: continue anticoagulation and structured surveillance.");
+        addActionUnique(decision, "Continue follow-up after PTE with reassessment in about 3-6 months; repeat hemodynamic review if clinically indicated.");
+        addActionUnique(decision, "No routine riociguat escalation is suggested when there is no residual PH after PTE.");
+      } else {
+        setPrimaryRecommendation(decision, "Operable CTEPH: refer for PTE/PEA evaluation as the preferred disease-modifying strategy.");
+        addActionUnique(decision, "Proceed with expert-center surgical evaluation for PTE/PEA.");
+        addActionUnique(decision, "Reassess for residual or recurrent PH after PTE because that determines later BPA or riociguat decisions.");
+      }
+    } else {
+      setPrimaryRecommendation(decision, "Non-operable CTEPH or persistent/recurrent PH after PTE: anticoagulation plus BPA eligibility review should direct BPA versus riociguat sequencing.");
+      if (bpaEligible === "yes") {
+        if (pvrGreaterThan4 === "yes") {
+          addActionUnique(decision, "BPA eligible with PVR >4 WU: consider medical therapy with riociguat before staged BPA, then reassess.");
+          decision.selectionTargets.push(
+            buildSelectionTarget(
+              "cteph_riociguat_optional",
+              "Riociguat before/alongside BPA pathway",
+              "Use when the multidisciplinary CTEPH team favors medical therapy/riociguat before BPA, especially when PVR remains >4 WU.",
+              ["riociguat"],
+              0,
+              1
+            )
+          );
+        } else if (pvrGreaterThan4 === "no") {
+          addActionUnique(decision, "BPA eligible with PVR not >4 WU: proceed with BPA planning at the expert center.");
+        } else {
+          addActionUnique(decision, "BPA eligible: clarify whether PVR remains >4 WU because this affects whether medical therapy/riociguat should precede BPA.");
+        }
+      } else if (bpaEligible === "no") {
+        addActionUnique(decision, "Not BPA eligible: consider riociguat for inoperable or persistent/recurrent symptomatic CTEPH.");
+        decision.selectionTargets.push(
+          buildSelectionTarget(
+            "cteph_riociguat_optional",
+            "Riociguat option",
+            "Riociguat is the main medication option when disease is inoperable or persistent/recurrent after PTE and BPA is not pursued.",
+            ["riociguat"],
+            0,
+            1
+          )
+        );
+      } else {
+        addActionUnique(decision, "Clarify BPA eligibility with the multidisciplinary CTEPH team; if not a BPA candidate, consider riociguat.");
+        decision.selectionTargets.push(
+          buildSelectionTarget(
+            "cteph_riociguat_optional",
+            "Optional riociguat pathway",
+            "Use only after or alongside expert-center assessment for BPA candidacy.",
+            ["riociguat"],
+            0,
+            1
+          )
+        );
+      }
+    }
 
-    decision.rationale.push("CTEPH escalation is interventional-first (PEA/BPA) plus lifelong anticoagulation, with riociguat in selected residual/inoperable disease.");
+    decision.rationale.push("The ALA/PHA guidance-to-guidelines CTEPH algorithm prioritizes expert-center operability review, then BPA candidacy, with riociguat used for non-operable disease or persistent/recurrent PH after PTE when appropriate.");
     return decision;
   }
 
@@ -2329,6 +2503,7 @@ function getActiveModifierLabels(input) {
 function buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugIds) {
   const lines = [];
   const combinedDrugIds = mergeDrugIds(currentRegimenDrugIds || [], selectedDrugIds || []);
+  const displayActions = getDisplayActions(decision);
 
   if (combinedDrugIds.length) {
     const combinedNames = combinedDrugIds.map((drugId) => DRUGS[drugId]).filter(Boolean).map((drug) => drug.name);
@@ -2343,21 +2518,12 @@ function buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugId
     lines.push(decision.primaryRecommendation);
   }
 
-  decision.actions.slice(0, 4).forEach((action) => {
+  displayActions.slice(0, 3).forEach((action) => {
     lines.push(action);
   });
 
-  if (selectedDrugIds && selectedDrugIds.length) {
-    const selectedNames = sortDrugIdsAlphabetically(selectedDrugIds)
-      .map((drugId) => DRUGS[drugId])
-      .filter(Boolean)
-      .map((drug) => drug.name);
-    lines.push(`Selected medication choices: ${selectedNames.join(", ")}.`);
-  } else if (decision.selectionTargets.length) {
-    decision.selectionTargets.slice(0, 4).forEach((target) => {
-      const drugNames = target.drugIds.map((drugId) => DRUGS[drugId]).filter(Boolean).map((drug) => drug.name);
-      lines.push(`${target.label}: ${drugNames.join(", ")}.`);
-    });
+  if (!selectedDrugIds.length && decision.selectionTargets.length) {
+    lines.push("Medication options remain unvalidated; select and validate a regimen to generate medication-specific initiation steps.");
   }
 
   return lines;
@@ -2576,6 +2742,7 @@ function renderDecision(decision) {
   const validationEl = document.getElementById("regimen-validation");
   const detailsEl = document.getElementById("medication-details");
   const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
+  const displayActions = getDisplayActions(decision);
   const riskToneClass = getRiskToneClass(decision.risk.pathwayLabel || decision.risk.label);
   const riskTableHtml = decision.riskTable
     ? buildKeyValueTableHtml([
@@ -2620,7 +2787,7 @@ function renderDecision(decision) {
 
   actionsEl.innerHTML = `
     <strong>Escalation Options / Next Actions</strong>
-    ${decision.actions.length ? `<ol>${decision.actions.map((action) => `<li>${escapeHtml(action)}</li>`).join("")}</ol>` : "<p>No additional escalation options listed.</p>"}
+    ${displayActions.length ? `<ol>${displayActions.map((action) => `<li>${escapeHtml(action)}</li>`).join("")}</ol>` : "<p>No additional escalation options listed.</p>"}
   `;
 
   monitoringEl.innerHTML = decision.monitoringSafety.length
@@ -2737,7 +2904,7 @@ function handlePatientFormSubmit(form, formMessage) {
   clearFormMessage(formMessage);
   const input = parseInput(new FormData(form));
   window.__CURRENT_INPUT = input;
-  const decision = buildDecision(input);
+  const decision = normalizeDecisionOutput(buildDecision(input));
   renderDecision(decision);
 }
 
@@ -2784,6 +2951,7 @@ function init() {
   const riskScoreInputs = document.getElementById("risk-score-inputs");
   const clinicalPolicyLayer = document.getElementById("clinical-policy-layer");
   const currentRegimenFieldset = document.getElementById("current-regimen-fieldset");
+  const ctephWorkflowFieldset = document.getElementById("cteph-workflow-fieldset");
   const currentRegimenOptions = document.getElementById("current-regimen-options");
   const riskModelSelect = document.getElementById("risk-model");
   const advancedRiskDetails = document.getElementById("advanced-risk-details");
@@ -2901,6 +3069,7 @@ function init() {
       return;
     }
     const showGroup1 = whoGroupSelect.value === "1";
+    const showGroup4 = whoGroupSelect.value === "4";
     const showFollowupRegimen = showGroup1 && assessmentStageSelect && assessmentStageSelect.value === "follow_up";
     if (showGroup1) {
       riskScoreInputs.classList.remove("is-hidden");
@@ -2916,6 +3085,7 @@ function init() {
     }
     setFieldsetVisibility(clinicalPolicyLayer, showGroup1);
     setFieldsetVisibility(currentRegimenFieldset, showFollowupRegimen);
+    setFieldsetVisibility(ctephWorkflowFieldset, showGroup4);
   };
 
   const syncRenalStatusFromEgfr = () => {

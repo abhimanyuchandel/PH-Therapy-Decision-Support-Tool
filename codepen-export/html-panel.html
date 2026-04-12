@@ -311,6 +311,49 @@
           <div class="modifier-grid" id="current-regimen-options"></div>
         </fieldset>
 
+        <fieldset class="modifier-group full-span is-hidden" id="cteph-workflow-fieldset">
+          <legend>Group 4 CTEPH / CTED Workflow</legend>
+          <p class="modifier-intro">Use the ALA/PHA guidance-to-guidelines CTEPH pathway to clarify operability, BPA candidacy, and the post-PTE branch before surfacing riociguat.</p>
+          <div class="modifier-grid">
+            <label>
+              Operability status at expert CTEPH center
+              <select name="ctephOperability">
+                <option value="not_assessed">Not yet assessed</option>
+                <option value="operable">Operable</option>
+                <option value="non_operable">Non-operable</option>
+              </select>
+            </label>
+
+            <label>
+              Post-PTE status
+              <select name="ctephPersistentAfterPte">
+                <option value="not_applicable">Not applicable / PTE not yet performed</option>
+                <option value="none_after_pte">No residual PH after PTE</option>
+                <option value="persistent_recurrent">Persistent or recurrent PH after PTE</option>
+              </select>
+            </label>
+
+            <label>
+              BPA eligible?
+              <select name="ctephBpaEligible">
+                <option value="not_assessed">Not yet assessed</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+
+            <label>
+              PVR &gt;4 WU when sequencing BPA?
+              <select name="ctephPvrGreaterThan4">
+                <option value="not_assessed">Not yet assessed</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <small class="input-help">Per the ALA/PHA consensus CTEPH pathway, PVR &gt;4 WU supports using medical therapy/riociguat before staged BPA.</small>
+            </label>
+          </div>
+        </fieldset>
+
         <fieldset class="modifier-group full-span">
           <legend>Phenotype Modifiers</legend>
           <p class="modifier-intro">Use these to adjust pathway selection when phenotype is atypical or condition-specific.</p>
@@ -465,6 +508,9 @@
       <details class="references-drawer">
         <summary>Open references used to frame this build</summary>
         <ul class="reference-list">
+          <li><a href="https://academic.oup.com/eurheartj/article/43/38/3618/6673929" target="_blank" rel="noreferrer">2022 ESC/ERS Guidelines for the diagnosis and treatment of pulmonary hypertension</a></li>
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11533989/" target="_blank" rel="noreferrer">2024 WSPH definition, classification and diagnosis of pulmonary hypertension</a></li>
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11525349/" target="_blank" rel="noreferrer">2024 WSPH treatment algorithm for pulmonary arterial hypertension</a></li>
           <li><a href="https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/761363s008lbl.pdf" target="_blank" rel="noreferrer">Sotatercept / Winrevair FDA label (2025 update)</a></li>
           <li><a href="https://www.lung.org/getmedia/b613ee8b-c808-4646-9608-459499185602/PH-Guidelines_Nov2024.pdf" target="_blank" rel="noreferrer">American Lung Association / PHA guidance-to-guidelines document (Nov 2024)</a></li>
           <li>Risk tool intent in this build: initial Group 1 uses REVEAL 2.0 or simplified ESC/ERS-style 3-variable baseline estimate; follow-up Group 1 uses REVEAL Lite 2, COMPERA 2.0 4-risk strata, or French noninvasive criteria.</li>
