@@ -3703,16 +3703,8 @@ function buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugId
   return lines;
 }
 
-function buildCopyableSummaryText(decision, input, selectedDrugIds) {
+function buildRiskSnapshotLines(decision, input) {
   const lines = [];
-  const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
-  const modifiers = getActiveModifierLabels(input);
-  const medicationPlanLines = buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugIds || []);
-
-  lines.push("PH Therapy Navigator Case Summary");
-  lines.push(`Assessment moment: ${getAssessmentStageLabel(input.assessmentStage)}`);
-  lines.push(`WHO clinical group: ${getWhoGroupLabel(input.whoGroup)}`);
-  lines.push(`Hemodynamics: ${decision.hemo.profile}. ${decision.hemo.detail}`);
 
   if (input.whoFc) {
     lines.push(`WHO functional class: ${input.whoFc}`);
@@ -3733,37 +3725,70 @@ function buildCopyableSummaryText(decision, input, selectedDrugIds) {
     lines.push(`Total score: ${decision.risk.score === null || decision.risk.score === undefined ? "--" : Math.round(decision.risk.score)}`);
   }
 
+  return lines;
+}
+
+function buildCopyableSummaryText(decision, input, selectedDrugIds) {
+  const lines = [];
+  const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
+  const modifiers = getActiveModifierLabels(input);
+  const riskSnapshotLines = buildRiskSnapshotLines(decision, input);
+  const medicationPlanLines = buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugIds || []);
+  const currentRegimenNames = currentRegimenDrugIds
+    .map((drugId) => DRUGS[drugId])
+    .filter(Boolean)
+    .map((drug) => drug.name);
+
+  lines.push("PH Therapy Navigator Note");
+  lines.push("");
+  lines.push("Clinical Context:");
+  lines.push(`- Assessment: ${getAssessmentStageLabel(input.assessmentStage)}`);
+  lines.push(`- WHO clinical group: ${getWhoGroupLabel(input.whoGroup)}`);
+  lines.push(`- Hemodynamics: ${decision.hemo.profile}. ${decision.hemo.detail}`);
+
+  if (currentRegimenNames.length) {
+    lines.push(`- Current regimen: ${currentRegimenNames.join(", ")}`);
+  }
+
   if (modifiers.length) {
-    lines.push(`Key modifiers: ${modifiers.join("; ")}.`);
+    lines.push(`- Key modifiers: ${modifiers.join("; ")}`);
+  }
+
+  if (riskSnapshotLines.length) {
+    lines.push("");
+    lines.push("Risk:");
+    riskSnapshotLines.forEach((line) => {
+      lines.push(`- ${line}`);
+    });
   }
 
   lines.push("");
-  lines.push("Basic medication management plan:");
-  medicationPlanLines.forEach((line) => {
-    lines.push(`- ${line}`);
-  });
+  lines.push("Assessment:");
+  lines.push(`- ${decision.primaryRecommendation || "Clinical decision support output generated from entered data."}`);
+
+  if (decision.alerts.length) {
+    decision.alerts.slice(0, 3).forEach((alert) => {
+      lines.push(`- Guardrail: ${alert}`);
+    });
+  }
+
+  lines.push("");
+  lines.push("Plan:");
+  if (medicationPlanLines.length) {
+    medicationPlanLines.forEach((line, index) => {
+      lines.push(`${index + 1}. ${line}`);
+    });
+  } else {
+    lines.push("1. No medication change recommended based on the currently entered data.");
+  }
 
   if (decision.monitoringSafety.length) {
     lines.push("");
-    lines.push("Monitoring / safety:");
+    lines.push("Monitoring / Safety:");
     decision.monitoringSafety.slice(0, 4).forEach((item) => {
       lines.push(`- ${item}`);
     });
   }
-
-  if (decision.alerts.length) {
-    lines.push("");
-    lines.push("Key guardrails:");
-    decision.alerts.slice(0, 4).forEach((alert) => {
-      lines.push(`- ${alert}`);
-    });
-  }
-
-  lines.push("");
-  lines.push("Key citations:");
-  IMPORTANT_CITATIONS.forEach((citation) => {
-    lines.push(`- ${citation.label}: ${citation.href}`);
-  });
 
   return lines.join("\n");
 }
@@ -3778,7 +3803,7 @@ function renderCopyableSummary(summaryEl, decision, input, selectedDrugIds) {
 
   summaryEl.innerHTML = `
     <strong>Copyable Case Summary</strong>
-    <p class="copy-summary-note">Use this plain-text summary for notes, messages, or handoff documentation.</p>
+    <p class="copy-summary-note">Use this note-style plain-text summary for documentation, messaging, or handoff.</p>
     <div class="copy-summary-actions">
       <button type="button" class="secondary-btn" id="copy-case-summary-btn">Copy Summary</button>
       <span class="copy-summary-status" id="copy-case-summary-status" aria-live="polite"></span>
