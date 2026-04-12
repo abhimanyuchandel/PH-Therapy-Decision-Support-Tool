@@ -2226,6 +2226,33 @@ function buildMedicationDetailsHtml(drugIds, currentRegimenDrugIds, selectedDrug
   `;
 }
 
+function buildTableHtml(table, title) {
+  if (!table || !table.columns || !table.rows || !table.rows.length) {
+    return "";
+  }
+
+  const headerHtml = table.columns.map((column) => `<th scope="col">${escapeHtml(column)}</th>`).join("");
+  const bodyHtml = table.rows.map((row) => `
+      <tr>
+        ${row.map((cell, index) => `<td data-label="${escapeHtml(table.columns[index] || "")}">${escapeHtml(cell)}</td>`).join("")}
+      </tr>
+    `).join("");
+
+  return `
+    ${title ? `<strong>${escapeHtml(title)}</strong>` : ""}
+    <div class="risk-table-wrap">
+      <table class="risk-table">
+        <thead>
+          <tr>${headerHtml}</tr>
+        </thead>
+        <tbody>
+          ${bodyHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderDecision(decision) {
   const summaryEl = document.getElementById("decision-summary");
   const primaryEl = document.getElementById("primary-recommendation");
@@ -2240,47 +2267,8 @@ function renderDecision(decision) {
   const detailsEl = document.getElementById("medication-details");
   const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
   const riskToneClass = getRiskToneClass(decision.risk.pathwayLabel || decision.risk.label);
-  const riskTableHtml = decision.riskTable && decision.riskTable.columns && decision.riskTable.rows && decision.riskTable.rows.length
-    ? `
-      <div class="risk-table-wrap">
-        <table class="risk-table">
-          <thead>
-            <tr>
-              ${decision.riskTable.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${decision.riskTable.rows.map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `
-    : "";
-  const transparencyTableHtml = decision.transparencyTable && decision.transparencyTable.columns && decision.transparencyTable.rows && decision.transparencyTable.rows.length
-    ? `
-      <strong>Risk Tool Transparency</strong>
-      <div class="risk-table-wrap">
-        <table class="risk-table">
-          <thead>
-            <tr>
-              ${decision.transparencyTable.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${decision.transparencyTable.rows.map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `
-    : "";
+  const riskTableHtml = buildTableHtml(decision.riskTable);
+  const transparencyTableHtml = buildTableHtml(decision.transparencyTable, "Risk Tool Transparency");
 
   updateRiskStrataHighlight(decision.risk.label, decision.risk.modelId || getSelectedRiskModelFromUi());
   setResultsPanelState(true, false);

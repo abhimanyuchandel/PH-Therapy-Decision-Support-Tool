@@ -687,6 +687,10 @@ select:focus {
 }
 
 @media (max-width: 760px) {
+  .panel {
+    padding: 1rem;
+  }
+
   .results-actions {
     width: 100%;
   }
@@ -698,5 +702,62 @@ select:focus {
   .primary-reco-topline {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .reco-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .selector-group {
+    padding: 0.8rem 0.75rem;
+  }
+
+  .risk-table-wrap {
+    overflow: visible;
+  }
+
+  .risk-table {
+    min-width: 0;
+    background: transparent;
+  }
+
+  .risk-table thead {
+    display: none;
+  }
+
+  .risk-table,
+  .risk-table tbody,
+  .risk-table tr,
+  .risk-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .risk-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fffefb;
+    overflow: hidden;
+  }
+
+  .risk-table td {
+    display: grid;
+    grid-template-columns: minmax(120px, 42%) 1fr;
+    gap: 0.55rem;
+    padding: 0.6rem 0.75rem;
+    border: 0;
+    border-bottom: 1px solid rgba(212, 221, 215, 0.7);
+    text-align: left;
+  }
+
+  .risk-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .risk-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--ink);
   }
 }

@@ -688,6 +688,10 @@ select:focus {
 }
 
 @media (max-width: 760px) {
+  .panel {
+    padding: 1rem;
+  }
+
   .results-actions {
     width: 100%;
   }
@@ -699,6 +703,63 @@ select:focus {
   .primary-reco-topline {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .reco-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .selector-group {
+    padding: 0.8rem 0.75rem;
+  }
+
+  .risk-table-wrap {
+    overflow: visible;
+  }
+
+  .risk-table {
+    min-width: 0;
+    background: transparent;
+  }
+
+  .risk-table thead {
+    display: none;
+  }
+
+  .risk-table,
+  .risk-table tbody,
+  .risk-table tr,
+  .risk-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .risk-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fffefb;
+    overflow: hidden;
+  }
+
+  .risk-table td {
+    display: grid;
+    grid-template-columns: minmax(120px, 42%) 1fr;
+    gap: 0.55rem;
+    padding: 0.6rem 0.75rem;
+    border: 0;
+    border-bottom: 1px solid rgba(212, 221, 215, 0.7);
+    text-align: left;
+  }
+
+  .risk-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .risk-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--ink);
   }
 }
 </style>
@@ -3411,6 +3472,33 @@ function buildMedicationDetailsHtml(drugIds, currentRegimenDrugIds, selectedDrug
   `;
 }
 
+function buildTableHtml(table, title) {
+  if (!table || !table.columns || !table.rows || !table.rows.length) {
+    return "";
+  }
+
+  const headerHtml = table.columns.map((column) => `<th scope="col">${escapeHtml(column)}</th>`).join("");
+  const bodyHtml = table.rows.map((row) => `
+      <tr>
+        ${row.map((cell, index) => `<td data-label="${escapeHtml(table.columns[index] || "")}">${escapeHtml(cell)}</td>`).join("")}
+      </tr>
+    `).join("");
+
+  return `
+    ${title ? `<strong>${escapeHtml(title)}</strong>` : ""}
+    <div class="risk-table-wrap">
+      <table class="risk-table">
+        <thead>
+          <tr>${headerHtml}</tr>
+        </thead>
+        <tbody>
+          ${bodyHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderDecision(decision) {
   const summaryEl = document.getElementById("decision-summary");
   const primaryEl = document.getElementById("primary-recommendation");
@@ -3425,47 +3513,8 @@ function renderDecision(decision) {
   const detailsEl = document.getElementById("medication-details");
   const currentRegimenDrugIds = decision.currentRegimenDrugIds || [];
   const riskToneClass = getRiskToneClass(decision.risk.pathwayLabel || decision.risk.label);
-  const riskTableHtml = decision.riskTable && decision.riskTable.columns && decision.riskTable.rows && decision.riskTable.rows.length
-    ? `
-      <div class="risk-table-wrap">
-        <table class="risk-table">
-          <thead>
-            <tr>
-              ${decision.riskTable.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${decision.riskTable.rows.map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `
-    : "";
-  const transparencyTableHtml = decision.transparencyTable && decision.transparencyTable.columns && decision.transparencyTable.rows && decision.transparencyTable.rows.length
-    ? `
-      <strong>Risk Tool Transparency</strong>
-      <div class="risk-table-wrap">
-        <table class="risk-table">
-          <thead>
-            <tr>
-              ${decision.transparencyTable.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${decision.transparencyTable.rows.map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `
-    : "";
+  const riskTableHtml = buildTableHtml(decision.riskTable);
+  const transparencyTableHtml = buildTableHtml(decision.transparencyTable, "Risk Tool Transparency");
 
   updateRiskStrataHighlight(decision.risk.label, decision.risk.modelId || getSelectedRiskModelFromUi());
   setResultsPanelState(true, false);
