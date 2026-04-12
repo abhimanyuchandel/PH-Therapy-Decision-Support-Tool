@@ -1310,12 +1310,11 @@ select:focus {
         <div id="eligibility-checks" class="result-block"></div>
         <div id="risk-transparency" class="result-block"></div>
         <div id="recommendation-rationale" class="result-block"></div>
-        <div id="copyable-summary" class="result-block"></div>
-        <div id="decision-citations" class="result-block"></div>
-
         <div id="medication-selector" class="result-block"></div>
         <div id="regimen-validation" class="result-block"></div>
         <div id="medication-details" class="result-block"></div>
+        <div id="copyable-summary" class="result-block"></div>
+        <div id="decision-citations" class="result-block"></div>
       </div>
     </section>
 
@@ -3703,6 +3702,46 @@ function buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugId
   return lines;
 }
 
+function buildMedicationSelectionReference(selectedDrugIds) {
+  const names = sortDrugIdsAlphabetically(selectedDrugIds || [])
+    .map((drugId) => DRUGS[drugId])
+    .filter(Boolean)
+    .map((drug) => drug.name);
+
+  if (!names.length) {
+    return "";
+  }
+
+  return names.join(", ");
+}
+
+function buildMedicationInitiationNextSteps(selectedDrugIds) {
+  const steps = [];
+  const sortedDrugIds = sortDrugIdsAlphabetically(selectedDrugIds || []);
+
+  if (!sortedDrugIds.length) {
+    return steps;
+  }
+
+  const selectedNames = buildMedicationSelectionReference(sortedDrugIds);
+  if (selectedNames) {
+    steps.push(`Selected medications for initiation/escalation: ${selectedNames}.`);
+  }
+
+  sortedDrugIds.forEach((drugId) => {
+    const drug = DRUGS[drugId];
+    if (!drug) {
+      return;
+    }
+    steps.push(`Initiate ${drug.name} via ${drug.route} at ${drug.startDose}; goal/titration ${drug.goalDose}.`);
+  });
+
+  steps.push("Confirm baseline contraindication, interaction, pregnancy, renal, and hepatic review before starting the selected regimen.");
+  steps.push("Arrange early follow-up to assess tolerance, confirm titration progress, and complete medication-specific monitoring.");
+
+  return steps;
+}
+
 function buildRiskSnapshotLines(decision, input) {
   const lines = [];
 
@@ -3734,6 +3773,7 @@ function buildCopyableSummaryText(decision, input, selectedDrugIds) {
   const modifiers = getActiveModifierLabels(input);
   const riskSnapshotLines = buildRiskSnapshotLines(decision, input);
   const medicationPlanLines = buildMedicationPlanText(decision, currentRegimenDrugIds, selectedDrugIds || []);
+  const initiationSteps = buildMedicationInitiationNextSteps(selectedDrugIds || []);
   const currentRegimenNames = currentRegimenDrugIds
     .map((drugId) => DRUGS[drugId])
     .filter(Boolean)
@@ -3780,6 +3820,14 @@ function buildCopyableSummaryText(decision, input, selectedDrugIds) {
     });
   } else {
     lines.push("1. No medication change recommended based on the currently entered data.");
+  }
+
+  if (initiationSteps.length) {
+    lines.push("");
+    lines.push("Medication Initiation Next Steps:");
+    initiationSteps.forEach((step, index) => {
+      lines.push(`${index + 1}. ${step}`);
+    });
   }
 
   if (decision.monitoringSafety.length) {
