@@ -449,14 +449,18 @@ function toNullableBoolean(value) {
 }
 
 function parseInput(formData) {
+  const mPAP = toNumber(formData.get("mPAP"));
+  const pawp = toNumber(formData.get("PAWP"));
+  const pvr = toNumber(formData.get("PVR"));
+
   return {
     assessmentStage: formData.get("assessmentStage"),
     riskModel: formData.get("riskModel"),
     sotaterceptPlacementMode: formData.get("sotaterceptPlacementMode") || CLINICAL_POLICY.sotaterceptPlacementMode,
     whoGroup: formData.get("whoGroup"),
-    mPAP: toNumber(formData.get("mPAP")),
-    PAWP: toNumber(formData.get("PAWP")),
-    PVR: toNumber(formData.get("PVR")),
+    mPAP,
+    PAWP: pawp,
+    PVR: pvr,
     whoFc: formData.get("whoFc"),
     walkDistance: toNumber(formData.get("walkDistance")),
     bnp: toNumber(formData.get("bnp")),
@@ -487,7 +491,7 @@ function parseInput(formData) {
     ildAssociated: formData.get("ildAssociated") === "on",
     severeIldPh: formData.get("severeIldPh") === "on",
     rightHeartFailureSigns: formData.get("rightHeartFailureSigns") === "on",
-    volumeOverload: formData.get("volumeOverload") === "on",
+    volumeOverload: formData.get("volumeOverload") === "on" || (pawp !== null && pawp > 15),
     pregnantOrTrying: formData.get("pregnantOrTrying") === "on",
     onNitrates: formData.get("onNitrates") === "on",
     strongCyp2c8Inhibitor: formData.get("strongCyp2c8Inhibitor") === "on",
@@ -1592,6 +1596,11 @@ function maybeAddSotaterceptOption(decision, input, pathwayRiskLabel, currentReg
     return;
   }
 
+  decision.eligibilityChecks.push(eligibility.plateletMessage);
+  decision.eligibilityChecks.push(eligibility.pregnancyMessage);
+  decision.eligibilityChecks.push(eligibility.monitoringMessage);
+  decision.eligibilityChecks.push(eligibility.indicationMessage);
+
   if (eligibility.eligible) {
     addActionUnique(decision, "Consider adding sotatercept (Winrevair) if low-risk status has not been achieved.");
   } else {
@@ -1660,19 +1669,20 @@ function appendTransplantReferralRecommendation(decision, input, riskResult, pat
     pathwayRiskLabel === "intermediate_high" ||
     pathwayRiskLabel === "high";
 
-  if (needsReferral) {
-    addActionUnique(decision, "Recommend referral to a lung transplant center for formal evaluation.");
-  }
-
   const needsListingDiscussion =
     (selectedModel === "reveal20_initial" && selectedScore !== null && selectedScore >= 10) ||
     pathwayRiskLabel === "high";
 
-  if (needsListingDiscussion) {
+  if (needsReferral && needsListingDiscussion) {
     addActionUnique(
       decision,
-      "If high risk persists despite optimized therapy (including parenteral prostacyclin when appropriate), discuss transplant listing candidacy."
+      "Recommend referral to a lung transplant center for formal evaluation; if high risk persists despite optimized therapy, discuss transplant listing candidacy with that center."
     );
+    return;
+  }
+
+  if (needsReferral) {
+    addActionUnique(decision, "Recommend referral to a lung transplant center for formal evaluation and early advanced-therapy planning.");
   }
 }
 
@@ -1749,12 +1759,6 @@ function buildDecision(input) {
     } else if (risk.limitedData) {
       decision.alerts.push("Selected risk model is based on limited variables. Interpret cautiously.");
     }
-    if (decision.sotaterceptEligibility) {
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.plateletMessage);
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.pregnancyMessage);
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.monitoringMessage);
-      decision.eligibilityChecks.push(decision.sotaterceptEligibility.indicationMessage);
-    }
     if (currentRegimen) {
       if (currentRegimen.isEmpty) {
         decision.summary.push("Current regimen: not entered.");
@@ -1774,6 +1778,18 @@ function buildDecision(input) {
     decision.actions.push("Do not initiate PH-targeted therapy based on current hemodynamics alone.");
     decision.actions.push("Reassess diagnosis and repeat workup if clinical suspicion remains high.");
     decision.rationale.push("Current definitions require mPAP >20 mmHg to meet hemodynamic PH criteria.");
+    return decision;
+  }
+
+  if (hemo.profile === "Isolated post-capillary PH phenotype") {
+    decision.riskTable = null;
+    decision.transparencyTable = null;
+    decision.eligibilityChecks = [];
+    setPrimaryRecommendation(decision, "Isolated post-capillary PH physiology: do not use PAH-directed therapy; focus on decongestion/diuresis and management of the post-capillary/left-heart phenotype.");
+    decision.alerts.push("Isolated post-capillary PH phenotype entered: PAH-directed therapies should not be administered on this hemodynamic profile.");
+    addActionUnique(decision, "Prioritize decongestion/diuresis and reassess volume status, filling pressures, and the left-heart disease phenotype.");
+    appendDiuresisRecommendation(decision, input, hemo);
+    decision.rationale.push("ESC/ERS guidance does not recommend PAH drugs for isolated post-capillary PH/PH-LHD physiology; management should focus on congestion relief and the underlying post-capillary driver.");
     return decision;
   }
 
@@ -2070,7 +2086,6 @@ function buildDecision(input) {
     if (pathwayRiskLabel === "high") {
       setPrimaryRecommendation(decision, "High initial-risk PAH: use upfront combination therapy including parenteral prostacyclin, an ERA, and a PDE5 inhibitor.");
       decision.actions.push("High baseline risk: use upfront combination including parenteral prostacyclin + ERA + PDE5 inhibitor.");
-      decision.actions.push("Initiate early advanced-therapy planning with transplant center involvement.");
       decision.selectionTargets.push(
         buildSelectionTarget("initial_era", "ERA selection", "Select one ERA.", ["bosentan", "ambrisentan", "macitentan"], 1, 1),
         buildSelectionTarget("initial_pde5", "PDE5 inhibitor selection", "Select one PDE5 inhibitor.", ["sildenafil", "tadalafil"], 1, 1),
@@ -2174,7 +2189,7 @@ function buildDecision(input) {
       }
 
       if (!currentRegimen.hasParenteral) {
-        setPrimaryRecommendation(decision, "Intermediate follow-up risk despite advanced oral/inhaled therapy: consider parenteral prostacyclin escalation and reassess transplant-oriented planning.");
+        setPrimaryRecommendation(decision, "Intermediate follow-up risk despite advanced oral/inhaled therapy: consider parenteral prostacyclin escalation and reassess promptly.");
         decision.actions.push(`Current regimen already includes advanced pathway therapy (${currentRegimen.names.join(", ")}).`);
         decision.actions.push("Because low risk is still not achieved, consider escalation from non-parenteral therapy to a parenteral prostacyclin-centered strategy.");
         pushSelectionTarget(
@@ -2192,7 +2207,7 @@ function buildDecision(input) {
         return decision;
       }
 
-      setPrimaryRecommendation(decision, "Intermediate follow-up risk despite parenteral therapy: optimize infusion dosing, confirm adherence/support systems, and advance transplant-oriented care.");
+      setPrimaryRecommendation(decision, "Intermediate follow-up risk despite parenteral therapy: optimize infusion dosing and confirm adherence/support systems.");
       decision.actions.push(`Current regimen already includes parenteral therapy (${currentRegimen.names.join(", ")}).`);
       decision.actions.push("Optimize current parenteral prostacyclin dosing and review pump/line adherence before adding further complexity.");
       if (!currentRegimen.hasEra) {
@@ -2253,7 +2268,7 @@ function buildDecision(input) {
 
   if (currentRegimen && !currentRegimen.isEmpty) {
     if (!currentRegimen.hasParenteral) {
-      setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk without parenteral therapy: escalate urgently to a parenteral-prostacyclin-centered regimen and refer for transplant-oriented care.");
+      setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk without parenteral therapy: escalate urgently to a parenteral-prostacyclin-centered regimen.");
       decision.actions.push(`Current regimen before escalation: ${currentRegimen.names.join(", ")}.`);
       decision.actions.push("Urgently add parenteral prostacyclin because the current regimen has not achieved low-risk status.");
       if (!currentRegimen.hasEra) {
@@ -2272,9 +2287,9 @@ function buildDecision(input) {
         1
       );
     } else {
-      setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk despite parenteral therapy: optimize infusion intensity, add any missing pathway therapy, and advance transplant listing evaluation.");
+      setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk despite parenteral therapy: optimize infusion intensity and add any missing pathway therapy.");
       decision.actions.push(`Current regimen already includes parenteral therapy (${currentRegimen.names.join(", ")}).`);
-      decision.actions.push("Escalate beyond the current regimen by optimizing parenteral dosing and closing any missing pathway gaps while moving transplant planning forward.");
+      decision.actions.push("Escalate beyond the current regimen by optimizing parenteral dosing and closing any missing pathway gaps.");
       if (!currentRegimen.hasEra) {
         pushSelectionTarget(decision, "highrisk_era", "ERA add-on", "Ensure one ERA is part of the regimen.", ["bosentan", "ambrisentan", "macitentan"], 1, 1);
       }
@@ -2283,8 +2298,8 @@ function buildDecision(input) {
       }
     }
   } else {
-    setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk: escalate to a parenteral-prostacyclin-centered regimen and refer for transplant-oriented care.");
-    decision.actions.push("Intermediate-high/high follow-up risk: escalate to parenteral prostacyclin-centered regimen and refer to transplant center.");
+    setPrimaryRecommendation(decision, "Intermediate-high/high follow-up risk: escalate to a parenteral-prostacyclin-centered regimen.");
+    decision.actions.push("Intermediate-high/high follow-up risk: escalate to parenteral prostacyclin-centered regimen.");
     decision.actions.push("Enter the current regimen to tailor high-risk escalation to therapies already in place.");
     pushSelectionTarget(decision, "highrisk_era", "ERA selection", "Ensure one ERA is in the regimen.", ["bosentan", "ambrisentan", "macitentan"], 1, 1);
     pushSelectionTarget(decision, "highrisk_pde5", "PDE5 inhibitor selection", "Ensure one PDE5 inhibitor is in the regimen.", ["sildenafil", "tadalafil"], 1, 1);
@@ -3285,8 +3300,10 @@ function init() {
   const formMessage = document.getElementById("form-message");
   const assessmentStageSelect = document.querySelector("select[name='assessmentStage']");
   const whoGroupSelect = document.querySelector("select[name='whoGroup']");
+  const pawpInput = document.querySelector("input[name='PAWP']");
   const egfrInput = document.querySelector("input[name='egfr']");
   const renalStatusSelect = document.querySelector("select[name='renalStatus']");
+  const volumeOverloadCheckbox = document.querySelector("input[name='volumeOverload']");
   const riskScoreInputs = document.getElementById("risk-score-inputs");
   const clinicalPolicyLayer = document.getElementById("clinical-policy-layer");
   const currentRegimenFieldset = document.getElementById("current-regimen-fieldset");
@@ -3437,6 +3454,22 @@ function init() {
       return;
     }
     renalStatusSelect.value = mappedStatus;
+  };
+
+  const syncVolumeOverloadFromPawp = () => {
+    if (!pawpInput || !volumeOverloadCheckbox) {
+      return;
+    }
+    const pawp = toNumber(pawpInput.value);
+    if (pawp !== null && pawp > 15) {
+      volumeOverloadCheckbox.checked = true;
+      volumeOverloadCheckbox.dataset.autoByPawp = "1";
+      return;
+    }
+    if (volumeOverloadCheckbox.dataset.autoByPawp === "1") {
+      volumeOverloadCheckbox.checked = false;
+      volumeOverloadCheckbox.removeAttribute("data-auto-by-pawp");
+    }
   };
 
   const getQuickCategoryFromValue = (targetName, value) => {
@@ -3655,6 +3688,7 @@ function init() {
   updateRiskInputsVisibility();
   setResultsPanelState(false, false);
   syncRenalStatusFromEgfr();
+  syncVolumeOverloadFromPawp();
   bindQuickFillButtons();
   bindResultsPanelControls();
   updateInputPlausibilityFeedback(false);
@@ -3680,6 +3714,13 @@ function init() {
   if (egfrInput) {
     egfrInput.addEventListener("input", syncRenalStatusFromEgfr);
     egfrInput.addEventListener("change", syncRenalStatusFromEgfr);
+  }
+  if (pawpInput) {
+    pawpInput.addEventListener("input", syncVolumeOverloadFromPawp);
+    pawpInput.addEventListener("change", syncVolumeOverloadFromPawp);
+  }
+  if (volumeOverloadCheckbox) {
+    volumeOverloadCheckbox.addEventListener("change", syncVolumeOverloadFromPawp);
   }
   form.addEventListener("input", () => {
     updateInputPlausibilityFeedback(false);
