@@ -46,7 +46,7 @@ var DRUGS = {
     startDose: "62.5 mg twice daily for 4 weeks",
     goalDose: "125 mg twice daily (adults >=40 kg)",
     monitoring: "Baseline + monthly LFTs; hemoglobin periodically; pregnancy testing/prevention program.",
-    interactions: "Contraindicated with cyclosporine A and glyburide; broad CYP interaction burden.",
+    interactions: "Contraindicated with cyclosporine A and glyburide; induces CYP3A/CYP2C9, lowering sildenafil, tadalafil, and warfarin exposure; hormonal contraception may be unreliable.",
     renal: "No major label-based start dose adjustment in common use; monitor clinically.",
     hepatic: "Hepatotoxic risk; avoid start in meaningful hepatic dysfunction and monitor closely.",
     pregnancy: "Contraindicated in pregnancy."
@@ -85,7 +85,7 @@ var DRUGS = {
     startDose: "20 mg three times daily",
     goalDose: "Commonly 20 mg three times daily; labeling allows titration up to 80 mg three times daily",
     monitoring: "Blood pressure, hypotension symptoms, vision/hearing adverse effects.",
-    interactions: "Contraindicated with nitrates and riociguat; caution with strong CYP3A modulators.",
+    interactions: "Contraindicated with nitrates and riociguat; bosentan substantially lowers sildenafil exposure and adding sildenafil to bosentan does not improve exercise capacity per label; caution with strong CYP3A modulators.",
     renal: "Typical outpatient starts usually unchanged, adjust by clinical context.",
     hepatic: "Assess hepatic status and interaction burden.",
     pregnancy: "No ERA-like boxed teratogenic warning, but pregnancy in PAH requires specialist management."
@@ -98,7 +98,7 @@ var DRUGS = {
     startDose: "40 mg once daily",
     goalDose: "Fixed maximum 40 mg once daily",
     monitoring: "Blood pressure, renal function, interaction review (especially CYP3A/ritonavir context).",
-    interactions: "Contraindicated with nitrates; avoid riociguat coadministration.",
+    interactions: "Contraindicated with nitrates; avoid riociguat coadministration; bosentan lowers tadalafil exposure.",
     renal: "Start lower in mild-moderate renal impairment; avoid in severe impairment.",
     hepatic: "Lower start often used in mild-moderate hepatic impairment; avoid severe impairment.",
     pregnancy: "Use only with specialist oversight in pregnancy contexts."
@@ -228,7 +228,7 @@ var DRUGS = {
     startDose: "Individualized loading/maintenance per INR protocol",
     goalDose: "Maintain therapeutic anticoagulation indefinitely",
     monitoring: "INR, bleeding risk, peri-procedural planning, interaction surveillance.",
-    interactions: "Large interaction burden with diet and medications.",
+    interactions: "Large interaction burden with diet and medications; bosentan can lower warfarin exposure, so INR surveillance should be tightened when bosentan is started or changed.",
     renal: "Can be used in severe renal disease with INR monitoring.",
     hepatic: "Liver disease complicates coagulation management; individualize.",
     pregnancy: "Pregnancy management differs and requires specialist obstetric/cardiopulmonary plan."
@@ -285,26 +285,51 @@ var CLINICAL_POLICY = {
 
 var IMPORTANT_CITATIONS = [
   {
+    id: "escers_2022",
     label: "2022 ESC/ERS Guidelines for the diagnosis and treatment of pulmonary hypertension",
     href: "https://academic.oup.com/eurheartj/article/43/38/3618/6673929"
   },
   {
+    id: "wsph_2024_definition",
     label: "2024 WSPH definition, classification and diagnosis of pulmonary hypertension",
     href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11533989/"
   },
   {
+    id: "wsph_2024_treatment",
     label: "2024 WSPH treatment algorithm for pulmonary arterial hypertension",
     href: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11525349/"
   },
   {
+    id: "ala_pha_2024",
     label: "2024 ALA/PHA panel consensus: Reimagining the ESC/ERS 2022 Diagnostic and Treatment Guidelines",
     href: "https://www.lung.org/getmedia/b613ee8b-c808-4646-9608-459499185602/PH-Guidelines_Nov2024.pdf"
   },
   {
+    id: "sotatercept_fda_2025",
     label: "Sotatercept / Winrevair FDA label (2025 update)",
     href: "https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/761363s008lbl.pdf"
+  },
+  {
+    id: "sildenafil_label",
+    label: "Sildenafil / Revatio prescribing information (DailyMed)",
+    href: "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=3bb9363e-b28d-4019-8aae-539233dca214"
+  },
+  {
+    id: "bosentan_label",
+    label: "Bosentan prescribing information (DailyMed)",
+    href: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=8444da17-6c31-492b-8842-93740f083d9d"
+  },
+  {
+    id: "chest_2019",
+    label: "2019 CHEST guideline update for therapy of pulmonary arterial hypertension in adults",
+    href: "https://www.sciencedirect.com/science/article/pii/S0012369219300029"
   }
 ];
+
+var IMPORTANT_CITATIONS_BY_ID = IMPORTANT_CITATIONS.reduce(function buildCitationLookup(lookup, citation) {
+  lookup[citation.id] = citation;
+  return lookup;
+}, {});
 
 var RISK_STRATA_CONFIG = {
   reveal20_initial: [
@@ -1237,6 +1262,31 @@ function addMonitoringUnique(decision, item) {
   }
 }
 
+function addCitationIdUnique(citationIds, citationId) {
+  if (!citationId || !IMPORTANT_CITATIONS_BY_ID[citationId]) {
+    return;
+  }
+  if (!citationIds.includes(citationId)) {
+    citationIds.push(citationId);
+  }
+}
+
+function getDrugSourceLabel(drugId, currentRegimenDrugIds, selectedDrugIds) {
+  const inCurrentRegimen = !!currentRegimenDrugIds && currentRegimenDrugIds.includes(drugId);
+  const inSelectedDrugs = !!selectedDrugIds && selectedDrugIds.includes(drugId);
+
+  if (inCurrentRegimen && inSelectedDrugs) {
+    return "current regimen and new selection";
+  }
+  if (inCurrentRegimen) {
+    return "current regimen";
+  }
+  if (inSelectedDrugs) {
+    return "new selection";
+  }
+  return "active regimen";
+}
+
 function setPrimaryRecommendation(decision, message) {
   decision.primaryRecommendation = message;
 }
@@ -2150,9 +2200,10 @@ function countByClass(selectedDrugIds) {
   return counts;
 }
 
-function validateSelection(decision, input, selectedDrugIds) {
+function validateSelection(decision, input, selectedDrugIds, currentRegimenDrugIds, newSelectedDrugIds) {
   const issues = [];
   const cautions = [];
+  const citationIds = [];
 
   for (const target of decision.selectionTargets) {
     const selectedForTarget = target.drugIds.filter((id) => selectedDrugIds.includes(id));
@@ -2175,6 +2226,10 @@ function validateSelection(decision, input, selectedDrugIds) {
 
   const hasRiociguat = selectedDrugIds.includes("riociguat");
   const hasPde5 = selectedClasses.has("pde5i");
+  const hasBosentan = selectedDrugIds.includes("bosentan");
+  const hasSildenafil = selectedDrugIds.includes("sildenafil");
+  const hasTadalafil = selectedDrugIds.includes("tadalafil");
+  const hasWarfarin = selectedDrugIds.includes("warfarin_cteph");
 
   if (hasRiociguat && hasPde5) {
     issues.push("Contraindicated combination: riociguat must not be combined with a PDE5 inhibitor.");
@@ -2231,6 +2286,34 @@ function validateSelection(decision, input, selectedDrugIds) {
     issues.push("Tadalafil: avoid in severe renal impairment.");
   }
 
+  if (hasBosentan && hasSildenafil) {
+    const bosentanSource = getDrugSourceLabel("bosentan", currentRegimenDrugIds, newSelectedDrugIds);
+    const sildenafilSource = getDrugSourceLabel("sildenafil", currentRegimenDrugIds, newSelectedDrugIds);
+    if (currentRegimenDrugIds && currentRegimenDrugIds.includes("bosentan") && newSelectedDrugIds && newSelectedDrugIds.includes("sildenafil")) {
+      cautions.push("Bosentan-sildenafil interaction: adding sildenafil to background bosentan lowers sildenafil exposure substantially and the sildenafil label states this add-on does not improve exercise capacity; the combination is usually tolerated and does not require routine dose adjustment.");
+    } else if (currentRegimenDrugIds && currentRegimenDrugIds.includes("sildenafil") && newSelectedDrugIds && newSelectedDrugIds.includes("bosentan")) {
+      cautions.push("Bosentan-sildenafil interaction: adding bosentan to background sildenafil lowers sildenafil exposure and increases bosentan exposure; 2022 ESC/ERS does not recommend bosentan added to sildenafil to reduce morbidity/mortality events.");
+    } else {
+      cautions.push(`Bosentan-sildenafil interaction: bosentan from the ${bosentanSource} lowers sildenafil exposure and sildenafil from the ${sildenafilSource} increases bosentan exposure; this combination is usually tolerated and does not require routine dose adjustment, but outcome benefit is limited compared with preferred ERA/PDE5i pairings.`);
+    }
+    addCitationIdUnique(citationIds, "bosentan_label");
+    addCitationIdUnique(citationIds, "sildenafil_label");
+    addCitationIdUnique(citationIds, "escers_2022");
+    addCitationIdUnique(citationIds, "chest_2019");
+  }
+
+  if (hasBosentan && hasTadalafil) {
+    cautions.push("Bosentan-tadalafil interaction: bosentan lowers tadalafil exposure; verify that this is the intended ERA/PDE5i pairing and reassess response closely after initiation or escalation.");
+    addCitationIdUnique(citationIds, "bosentan_label");
+    addCitationIdUnique(citationIds, "escers_2022");
+  }
+
+  if (hasBosentan && hasWarfarin) {
+    cautions.push("Bosentan-warfarin interaction: bosentan can lower warfarin exposure; check INR more closely after bosentan initiation, discontinuation, or dose change.");
+    addCitationIdUnique(citationIds, "bosentan_label");
+    addCitationIdUnique(citationIds, "escers_2022");
+  }
+
   const classCounts = countByClass(selectedDrugIds);
   for (const [classId, count] of Object.entries(classCounts)) {
     if (count > 1 && ["era", "pde5i", "sgc", "ip_receptor"].includes(classId)) {
@@ -2238,7 +2321,7 @@ function validateSelection(decision, input, selectedDrugIds) {
     }
   }
 
-  return { issues, cautions };
+  return { issues, cautions, citationIds };
 }
 
 function getRiskToneClass(label) {
@@ -2446,6 +2529,7 @@ function buildValidationHtml(validation, currentRegimenDrugIds, selectedDrugIds)
     <strong>Regimen Validation</strong>
     ${contextNote ? `<p class="muted">${escapeHtml(contextNote)}</p>` : ""}
     ${validationCards.join("")}
+    ${buildSelectedCitationLinksHtml(validation.citationIds, validation.citationIds && validation.citationIds.length ? "Interaction citations" : "")}
   `;
 }
 
@@ -2568,6 +2652,30 @@ function buildCitationLinksHtml() {
       ${IMPORTANT_CITATIONS.map((citation) => `
         <li><a href="${escapeHtml(citation.href)}" target="_blank" rel="noreferrer">${escapeHtml(citation.label)}</a></li>
       `).join("")}
+    </ul>
+  `;
+}
+
+function buildSelectedCitationLinksHtml(citationIds, title) {
+  if (!citationIds || !citationIds.length) {
+    return "";
+  }
+
+  const uniqueCitationIds = citationIds.filter(function keepUnique(citationId, index) {
+    return citationIds.indexOf(citationId) === index && IMPORTANT_CITATIONS_BY_ID[citationId];
+  });
+
+  if (!uniqueCitationIds.length) {
+    return "";
+  }
+
+  return `
+    ${title ? `<strong>${escapeHtml(title)}</strong>` : ""}
+    <ul class="citation-list">
+      ${uniqueCitationIds.map((citationId) => {
+        const citation = IMPORTANT_CITATIONS_BY_ID[citationId];
+        return `<li><a href="${escapeHtml(citation.href)}" target="_blank" rel="noreferrer">${escapeHtml(citation.label)}</a></li>`;
+      }).join("")}
     </ul>
   `;
 }
@@ -2927,7 +3035,7 @@ function renderDecision(decision) {
     `;
     if (currentRegimenDrugIds.length) {
     const input = window.__CURRENT_INPUT;
-    const validation = validateSelection(decision, input, currentRegimenDrugIds);
+    const validation = validateSelection(decision, input, currentRegimenDrugIds, currentRegimenDrugIds, []);
       validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, []);
       detailsEl.innerHTML = buildMedicationDetailsHtml(currentRegimenDrugIds, currentRegimenDrugIds, []);
       renderCopyableSummary(copySummaryEl, decision, input, []);
@@ -2976,7 +3084,7 @@ function renderDecision(decision) {
     const selectedDrugIds = sortDrugIdsAlphabetically(checkedInputs.map((el) => el.value));
     const combinedDrugIds = mergeDrugIds(currentRegimenDrugIds, selectedDrugIds);
     const input = window.__CURRENT_INPUT;
-    const validation = validateSelection(decision, input, combinedDrugIds);
+    const validation = validateSelection(decision, input, combinedDrugIds, currentRegimenDrugIds, selectedDrugIds);
 
     validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, selectedDrugIds);
     detailsEl.innerHTML = buildMedicationDetailsHtml(combinedDrugIds, currentRegimenDrugIds, selectedDrugIds);
