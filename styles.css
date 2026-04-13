@@ -179,6 +179,13 @@ select:focus {
   border-color: var(--accent);
 }
 
+input.input-range-flag,
+select.input-range-flag {
+  border-color: #c9743a;
+  background: #fff8f2;
+  box-shadow: 0 0 0 3px rgba(201, 116, 58, 0.12);
+}
+
 .checkbox-row {
   border: 1px dashed var(--line);
   border-radius: 10px;
@@ -608,6 +615,13 @@ select:focus {
 .detail-row {
   margin: 0.33rem 0;
   font-size: 0.92rem;
+}
+
+.detail-row-flagged {
+  border-left: 4px solid #c9743a;
+  background: #fff8f2;
+  padding: 0.42rem 0.56rem;
+  border-radius: 8px;
 }
 
 .selector-group {

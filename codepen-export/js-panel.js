@@ -351,6 +351,11 @@ var IMPORTANT_CITATIONS = [
     id: "nejm_apixaban_rivaroxaban_vte_2026",
     label: "2026 NEJM trial: apixaban vs rivaroxaban for acute venous thromboembolism",
     href: "https://www.nejm.org/doi/full/10.1056/NEJMoa2510703"
+  },
+  {
+    id: "increase_nejm_2021",
+    label: "2021 NEJM INCREASE trial: inhaled treprostinil in PH-ILD",
+    href: "https://pubmed.ncbi.nlm.nih.gov/33440084/"
   }
 ];
 
@@ -358,6 +363,21 @@ var IMPORTANT_CITATIONS_BY_ID = IMPORTANT_CITATIONS.reduce(function buildCitatio
   lookup[citation.id] = citation;
   return lookup;
 }, {});
+
+var INPUT_PLAUSIBILITY_RULES = {
+  mPAP: { label: "mPAP", min: 0, max: 120, unit: "mmHg" },
+  PAWP: { label: "PAWP", min: 0, max: 40, unit: "mmHg" },
+  PVR: { label: "PVR", min: 0, max: 25, unit: "WU" },
+  walkDistance: { label: "6MWD", min: 0, max: 1000, unit: "m" },
+  bnp: { label: "BNP", min: 0, max: 10000, unit: "pg/mL" },
+  ntProbnp: { label: "NT-proBNP", min: 0, max: 70000, unit: "pg/mL" },
+  systolicBp: { label: "Systolic BP", min: 40, max: 300, unit: "mmHg" },
+  platelets: { label: "Platelets", min: 0, max: 1000, unit: "x10^3/uL" },
+  heartRate: { label: "Heart rate", min: 20, max: 240, unit: "bpm" },
+  egfr: { label: "eGFR", min: 0, max: 200, unit: "mL/min/1.73m2" },
+  dlcoPercentPred: { label: "DLCO", min: 0, max: 150, unit: "% predicted" },
+  mrap: { label: "mRAP", min: 0, max: 40, unit: "mmHg" }
+};
 
 var RISK_STRATA_CONFIG = {
   reveal20_initial: [
@@ -614,6 +634,65 @@ function getRenalStatusFromEgfr(egfr) {
     return "moderate";
   }
   return "severe";
+}
+
+function hasRenalImpairment(input) {
+  if (!input) {
+    return false;
+  }
+  if (input.egfr !== null) {
+    return input.egfr < 60;
+  }
+  return input.renalStatus === "moderate" || input.renalStatus === "severe";
+}
+
+function hasHepaticImpairment(input) {
+  if (!input) {
+    return false;
+  }
+  return !!input.hepaticImpairment && input.hepaticImpairment !== "none";
+}
+
+function buildMedicationImpairmentFlagHtml(input) {
+  const messages = [];
+  if (hasRenalImpairment(input)) {
+    messages.push("Renal impairment entered: review renal considerations for suggested medications.");
+  }
+  if (hasHepaticImpairment(input)) {
+    messages.push("Hepatic impairment entered: review hepatic considerations for suggested medications.");
+  }
+  if (!messages.length) {
+    return "";
+  }
+  return `<div class="alert-card impairment-context"><strong>Medication context:</strong> ${escapeHtml(messages.join(" "))}</div>`;
+}
+
+function getInputPlausibilityWarnings(input) {
+  return Object.keys(INPUT_PLAUSIBILITY_RULES).reduce(function collectWarnings(warnings, fieldName) {
+    const rule = INPUT_PLAUSIBILITY_RULES[fieldName];
+    const value = input[fieldName];
+
+    if (value === null || value === undefined || value === "") {
+      return warnings;
+    }
+
+    if (value < rule.min || value > rule.max) {
+      warnings.push({
+        name: fieldName,
+        label: rule.label,
+        value,
+        message: `${rule.label} ${value} ${rule.unit} is outside the app's expected physiologic/clinical entry range (${rule.min}-${rule.max} ${rule.unit}). Confirm the entry.`
+      });
+    }
+    return warnings;
+  }, []);
+}
+
+function buildInputPlausibilityMessage(warnings) {
+  if (!warnings || !warnings.length) {
+    return "";
+  }
+  return `Check unusual values: ${warnings.map((warning) => warning.message).join(" ")}`;
 }
 
 function getRevealBiomarkerPoints(input) {
@@ -1728,19 +1807,25 @@ function buildDecision(input) {
   if (input.whoGroup === "3") {
     setPrimaryRecommendation(decision, "Optimize lung disease, oxygenation, and supportive care first; reserve targeted therapy for selected PH-ILD pathways.");
     decision.actions.push("Optimize underlying lung disease, oxygenation, and supportive care first.");
+    decision.actions.push("Suggest enrollment in pulmonary rehabilitation when clinically feasible.");
     decision.alerts.push("Group 3 guardrail: endothelin receptor antagonists and riociguat are not recommended because they may worsen gas exchange and are not standard therapy for Group 3 PH.");
     if (input.ildAssociated) {
-      decision.actions.push("PH-ILD branch: inhaled treprostinil can be considered with specialist oversight.");
-      decision.selectionTargets.push(
-        buildSelectionTarget(
-          "ild_targeted",
-          "Optional targeted therapy for ILD-PH",
-          "Select one inhaled prostacyclin option if pursuing targeted therapy.",
-          ["treprostinil_inhaled", "treprostinil_dpi"],
-          0,
-          1
-        )
-      );
+      const meetsTreprostinilPhIldThreshold = input.mPAP !== null && input.mPAP >= 25 && input.PVR !== null && input.PVR > 3;
+      if (meetsTreprostinilPhIldThreshold) {
+        decision.actions.push("PH-ILD branch: inhaled treprostinil can be considered with specialist oversight when the hemodynamic phenotype matches the studied PH-ILD population.");
+        decision.selectionTargets.push(
+          buildSelectionTarget(
+            "ild_targeted",
+            "Optional targeted therapy for ILD-PH",
+            "Select one inhaled prostacyclin option if pursuing targeted therapy.",
+            ["treprostinil_inhaled", "treprostinil_dpi"],
+            0,
+            1
+          )
+        );
+      } else {
+        decision.alerts.push("PH-ILD treprostinil gate not met: in this build, inhaled treprostinil is only surfaced when mPAP is >=25 mmHg and PVR is >3 WU, matching the studied PH-ILD treatment population.");
+      }
       if (input.severeIldPh) {
         decision.actions.push("Severe ILD-PH branch: PDE5 inhibitor may be considered in PH-center directed care.");
         decision.selectionTargets.push(
@@ -1757,7 +1842,7 @@ function buildDecision(input) {
     } else {
       decision.alerts.push("Most PAH-targeted drugs are not recommended in non-severe Group 3 PH.");
     }
-    decision.rationale.push("Guidance supports selective use of inhaled treprostinil in PH-ILD and generally discourages broad PAH-drug use in non-severe Group 3 PH.");
+    decision.rationale.push("Group 3 management starts with lung disease optimization, oxygen/supportive care, and pulmonary rehabilitation; inhaled treprostinil is selectively surfaced here only for ILD-associated PH when mPAP is >=25 mmHg and PVR is >3 WU, consistent with the studied PH-ILD population.");
     return decision;
   }
 
@@ -2562,7 +2647,7 @@ function buildValidationHtml(validation, currentRegimenDrugIds, selectedDrugIds)
   `;
 }
 
-function buildMedicationDetailsHtml(drugIds, currentRegimenDrugIds, selectedDrugIds) {
+function buildMedicationDetailsHtml(drugIds, currentRegimenDrugIds, selectedDrugIds, input) {
   if (!drugIds || !drugIds.length) {
     return "<strong>Medication Details</strong><p>No medications selected.</p>";
   }
@@ -2586,9 +2671,14 @@ function buildMedicationDetailsHtml(drugIds, currentRegimenDrugIds, selectedDrug
     contextNote = "Medication details reflect the current follow-up regimen.";
   }
 
+  const renalFlag = hasRenalImpairment(input);
+  const hepaticFlag = hasHepaticImpairment(input);
+  const impairmentNote = buildMedicationImpairmentFlagHtml(input);
+
   return `
     <strong>Medication Details</strong>
     ${contextNote ? `<p class="muted">${escapeHtml(contextNote)}</p>` : ""}
+    ${impairmentNote}
     ${drugIds
       .map((drugId) => {
         const d = DRUGS[drugId];
@@ -2615,8 +2705,8 @@ function buildMedicationDetailsHtml(drugIds, currentRegimenDrugIds, selectedDrug
             <p class="detail-row"><strong>Goal/titration:</strong> ${escapeHtml(d.goalDose)}</p>
             <p class="detail-row"><strong>Monitoring:</strong> ${escapeHtml(d.monitoring)}</p>
             <p class="detail-row"><strong>Key interactions:</strong> ${escapeHtml(d.interactions)}</p>
-            <p class="detail-row"><strong>Renal considerations:</strong> ${escapeHtml(d.renal)}</p>
-            <p class="detail-row"><strong>Hepatic considerations:</strong> ${escapeHtml(d.hepatic)}</p>
+            <p class="detail-row ${renalFlag ? "detail-row-flagged" : ""}"><strong>Renal considerations:</strong> ${escapeHtml(d.renal)}</p>
+            <p class="detail-row ${hepaticFlag ? "detail-row-flagged" : ""}"><strong>Hepatic considerations:</strong> ${escapeHtml(d.hepatic)}</p>
             <p class="detail-row"><strong>Pregnancy considerations:</strong> ${escapeHtml(d.pregnancy)}</p>
           </article>
         `;
@@ -3060,13 +3150,14 @@ function renderDecision(decision) {
     selectorEl.innerHTML = `
       <strong>Medication Selection</strong>
       <p>No additional medication selection required in this branch.</p>
+      ${buildMedicationImpairmentFlagHtml(window.__CURRENT_INPUT)}
       ${buildRegimenSummaryHtml(currentRegimenDrugIds)}
     `;
     if (currentRegimenDrugIds.length) {
     const input = window.__CURRENT_INPUT;
     const validation = validateSelection(decision, input, currentRegimenDrugIds, currentRegimenDrugIds, []);
       validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, []);
-      detailsEl.innerHTML = buildMedicationDetailsHtml(currentRegimenDrugIds, currentRegimenDrugIds, []);
+      detailsEl.innerHTML = buildMedicationDetailsHtml(currentRegimenDrugIds, currentRegimenDrugIds, [], input);
       renderCopyableSummary(copySummaryEl, decision, input, []);
     }
     return;
@@ -3075,6 +3166,7 @@ function renderDecision(decision) {
   selectorEl.innerHTML = `
     <strong>Medication Selection</strong>
     <p>Select preferred medications where options exist, then validate the regimen.</p>
+    ${buildMedicationImpairmentFlagHtml(window.__CURRENT_INPUT)}
     ${buildRegimenSummaryHtml(currentRegimenDrugIds)}
     <form id="med-select-form">
       <div class="reco-grid">
@@ -3116,7 +3208,7 @@ function renderDecision(decision) {
     const validation = validateSelection(decision, input, combinedDrugIds, currentRegimenDrugIds, selectedDrugIds);
 
     validationEl.innerHTML = buildValidationHtml(validation, currentRegimenDrugIds, selectedDrugIds);
-    detailsEl.innerHTML = buildMedicationDetailsHtml(combinedDrugIds, currentRegimenDrugIds, selectedDrugIds);
+    detailsEl.innerHTML = buildMedicationDetailsHtml(combinedDrugIds, currentRegimenDrugIds, selectedDrugIds, input);
     renderCopyableSummary(copySummaryEl, decision, input, selectedDrugIds);
   });
 }
@@ -3127,25 +3219,31 @@ function clearFormMessage(formMessage) {
   }
   formMessage.classList.remove("show");
   formMessage.textContent = "";
+  formMessage.removeAttribute("data-message-type");
 }
 
-function showFormMessage(formMessage, message) {
+function showFormMessage(formMessage, message, messageType) {
   if (!formMessage) {
     return;
   }
   formMessage.classList.add("show");
   formMessage.textContent = message;
+  formMessage.setAttribute("data-message-type", messageType || "general");
   if (typeof formMessage.scrollIntoView === "function") {
     formMessage.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 }
 
 function handlePatientFormSubmit(form, formMessage) {
-  clearFormMessage(formMessage);
   const input = parseInput(new FormData(form));
+  const plausibilityWarnings = getInputPlausibilityWarnings(input);
+  clearFormMessage(formMessage);
   window.__CURRENT_INPUT = input;
   const decision = normalizeDecisionOutput(applyContextToSelectionTargets(buildDecision(input), input));
   renderDecision(decision);
+  if (plausibilityWarnings.length) {
+    showFormMessage(formMessage, buildInputPlausibilityMessage(plausibilityWarnings), "plausibility");
+  }
 }
 
 function bindGlobalFormHandlers() {
@@ -3184,6 +3282,7 @@ function bindGlobalFormHandlers() {
 
 function init() {
   const form = document.getElementById("patient-form");
+  const formMessage = document.getElementById("form-message");
   const assessmentStageSelect = document.querySelector("select[name='assessmentStage']");
   const whoGroupSelect = document.querySelector("select[name='whoGroup']");
   const egfrInput = document.querySelector("input[name='egfr']");
@@ -3436,6 +3535,40 @@ function init() {
     });
   };
 
+  const applyInputPlausibilityFlags = (warnings) => {
+    const flaggedLookup = (warnings || []).reduce(function buildLookup(lookup, warning) {
+      lookup[warning.name] = true;
+      return lookup;
+    }, {});
+
+    Object.keys(INPUT_PLAUSIBILITY_RULES).forEach((fieldName) => {
+      const inputEl = form.querySelector(`[name='${fieldName}']`);
+      if (!inputEl) {
+        return;
+      }
+      if (flaggedLookup[fieldName]) {
+        inputEl.classList.add("input-range-flag");
+      } else {
+        inputEl.classList.remove("input-range-flag");
+      }
+    });
+  };
+
+  const updateInputPlausibilityFeedback = (showMessage) => {
+    const warnings = getInputPlausibilityWarnings(parseInput(new FormData(form)));
+    applyInputPlausibilityFlags(warnings);
+
+    if (showMessage && warnings.length) {
+      showFormMessage(formMessage, buildInputPlausibilityMessage(warnings), "plausibility");
+      return warnings;
+    }
+
+    if ((!warnings.length || !showMessage) && formMessage && formMessage.getAttribute("data-message-type") === "plausibility") {
+      clearFormMessage(formMessage);
+    }
+    return warnings;
+  };
+
   const bindQuickFillButtons = () => {
     quickFillButtons.forEach((button) => {
       button.addEventListener("click", () => {
@@ -3477,6 +3610,7 @@ function init() {
         if (targetName) {
           syncQuickFillButtonsForTarget(targetName);
         }
+        updateInputPlausibilityFeedback(false);
         const preview = getLiveRiskPreview(parseInput(new FormData(form)));
         updateRiskStrataHighlight(preview.label, preview.modelId);
       });
@@ -3523,6 +3657,7 @@ function init() {
   syncRenalStatusFromEgfr();
   bindQuickFillButtons();
   bindResultsPanelControls();
+  updateInputPlausibilityFeedback(false);
   updateLiveRiskPreview();
   if (whoGroupSelect) {
     whoGroupSelect.addEventListener("change", () => {
@@ -3546,8 +3681,14 @@ function init() {
     egfrInput.addEventListener("input", syncRenalStatusFromEgfr);
     egfrInput.addEventListener("change", syncRenalStatusFromEgfr);
   }
-  form.addEventListener("input", updateLiveRiskPreview);
-  form.addEventListener("change", updateLiveRiskPreview);
+  form.addEventListener("input", () => {
+    updateInputPlausibilityFeedback(false);
+    updateLiveRiskPreview();
+  });
+  form.addEventListener("change", () => {
+    updateInputPlausibilityFeedback(false);
+    updateLiveRiskPreview();
+  });
 
   return true;
 }
