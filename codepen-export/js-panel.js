@@ -1296,6 +1296,45 @@ function normalizeDecisionOutput(decision) {
   return decision;
 }
 
+function applyContextToSelectionTargets(decision, input) {
+  const filteredTargets = [];
+
+  (decision.selectionTargets || []).forEach((target) => {
+    let allowedDrugIds = (target.drugIds || []).filter((drugId) => !!DRUGS[drugId]);
+
+    if (input.pregnantOrTrying) {
+      allowedDrugIds = allowedDrugIds.filter((drugId) => !["era", "sgc", "ip_receptor"].includes(DRUGS[drugId].classId));
+    }
+
+    if (input.onNitrates) {
+      allowedDrugIds = allowedDrugIds.filter((drugId) => {
+        const classId = DRUGS[drugId].classId;
+        return classId !== "pde5i" && classId !== "sgc";
+      });
+    }
+
+    if (input.systolicBp !== null && input.systolicBp < 90) {
+      allowedDrugIds = allowedDrugIds.filter((drugId) => DRUGS[drugId].classId !== "pde5i");
+    }
+
+    if (!allowedDrugIds.length) {
+      return;
+    }
+
+    filteredTargets.push({
+      id: target.id,
+      label: target.label,
+      note: target.note,
+      drugIds: sortDrugIdsAlphabetically(allowedDrugIds),
+      min: Math.min(target.min, allowedDrugIds.length),
+      max: Math.min(target.max, allowedDrugIds.length)
+    });
+  });
+
+  decision.selectionTargets = filteredTargets;
+  return decision;
+}
+
 function getActivePolicy(input) {
   return {
     guidelineVersion: CLINICAL_POLICY.guidelineVersion,
@@ -1591,6 +1630,10 @@ function buildDecision(input) {
     decision.alerts.push("Pregnancy context detected: avoid teratogenic pathways (notably ERAs and riociguat) and co-manage with expert PH center.");
   }
 
+  if (input.vasoreactivityPositive && !input.vasoreactivityEligible) {
+    decision.alerts.push("Positive vasoreactivity was selected without an eligible IPAH/HPAH/drug-associated PAH phenotype. Confirm that vasoreactivity testing is appropriate before using the CCB branch.");
+  }
+
   if (input.severeIldPh && !input.ildAssociated) {
     decision.alerts.push("Severe ILD-PH modifier is set without ILD-associated PH; this flag is applied only within the ILD branch.");
   }
@@ -1607,6 +1650,7 @@ function buildDecision(input) {
   if (input.whoGroup === "3") {
     setPrimaryRecommendation(decision, "Optimize lung disease, oxygenation, and supportive care first; reserve targeted therapy for selected PH-ILD pathways.");
     decision.actions.push("Optimize underlying lung disease, oxygenation, and supportive care first.");
+    decision.alerts.push("Group 3 guardrail: endothelin receptor antagonists and riociguat are not recommended because they may worsen gas exchange and are not standard therapy for Group 3 PH.");
     if (input.ildAssociated) {
       decision.actions.push("PH-ILD branch: inhaled treprostinil can be considered with specialist oversight.");
       decision.selectionTargets.push(
@@ -1769,6 +1813,60 @@ function buildDecision(input) {
   }
 
   setPrimaryRecommendation(decision, "Group 1 PAH pathway active: use a treat-to-low-risk strategy with escalation when low risk is not achieved.");
+  addMonitoringUnique(decision, "Repeat risk assessment about 3-6 months after therapy initiation or escalation, including WHO-FC, exercise capacity, biomarkers, and treatment tolerance.");
+
+  if (input.pregnantOrTrying) {
+    setPrimaryRecommendation(decision, "Pregnancy in Group 1 PAH: urgently co-manage with an expert PH center and maternal-fetal medicine; avoid ERA, riociguat, and selexipag, and use pregnancy-compatible therapy selection.");
+    if (currentRegimen && (currentRegimen.hasEra || currentRegimen.hasSgc || currentRegimen.hasIpReceptor)) {
+      addActionUnique(decision, "Current regimen includes a pregnancy-restricted medication (ERA, riociguat, and/or selexipag). Transition off those agents with expert PH-obstetric guidance.");
+    } else {
+      addActionUnique(decision, "Do not initiate ERA, riociguat, or selexipag during pregnancy.");
+    }
+    addActionUnique(decision, "Use pregnancy-compatible PAH therapy selection under expert supervision, commonly PDE5 inhibitor and/or prostacyclin-based therapy depending on severity.");
+    if (pathwayRiskLabel === "high" || pathwayRiskLabel === "intermediate_high" || input.rightHeartFailureSigns) {
+      pushSelectionTarget(
+        decision,
+        "pregnancy_parenteral_prostacyclin",
+        "Pregnancy-compatible parenteral prostacyclin option",
+        "Select one parenteral prostacyclin strategy if a prostacyclin-centered pregnancy regimen is needed.",
+        ["epoprostenol_iv", "treprostinil_sciv"],
+        0,
+        1
+      );
+    }
+    pushSelectionTarget(
+      decision,
+      "pregnancy_pde5",
+      "Pregnancy-compatible PDE5 inhibitor option",
+      "Select a PDE5 inhibitor only with expert pregnancy oversight.",
+      ["sildenafil", "tadalafil"],
+      0,
+      1
+    );
+    pushSelectionTarget(
+      decision,
+      "pregnancy_inhaled_prostacyclin",
+      "Pregnancy-compatible inhaled prostacyclin option",
+      "Consider inhaled prostacyclin support when clinically appropriate under expert supervision.",
+      ["iloprost", "treprostinil_inhaled"],
+      0,
+      1
+    );
+    if (input.vasoreactivityEligible && input.vasoreactivityPositive) {
+      pushSelectionTarget(
+        decision,
+        "pregnancy_ccb",
+        "Optional vasoreactivity-responder CCB pathway",
+        "Use only when formal vasoreactivity testing was positive at an experienced PH center.",
+        ["ccb_vasoreactive"],
+        0,
+        1
+      );
+    }
+    decision.rationale.push("The executive summary and contemporary guidance emphasize urgent expert pregnancy management and avoidance of ERA, riociguat, and selexipag in pregnancy.");
+    appendTransplantReferralRecommendation(decision, input, risk, pathwayRiskLabel);
+    return decision;
+  }
 
   if (input.vasoreactivityEligible && input.vasoreactivityPositive) {
     setPrimaryRecommendation(decision, "Positive vasoreactivity branch: consider a high-dose calcium-channel-blocker strategy with strict reassessment.");
@@ -2087,8 +2185,9 @@ function validateSelection(decision, input, selectedDrugIds) {
   }
 
   const hasEra = selectedClasses.has("era");
-  if (input.pregnantOrTrying && (hasEra || hasRiociguat)) {
-    issues.push("Pregnancy guardrail: avoid ERAs and riociguat in pregnancy/trying-to-conceive context.");
+  const hasIpReceptor = selectedClasses.has("ip_receptor");
+  if (input.pregnantOrTrying && (hasEra || hasRiociguat || hasIpReceptor)) {
+    issues.push("Pregnancy guardrail: avoid ERAs, riociguat, and selexipag in pregnancy/trying-to-conceive context.");
   }
 
   if (input.strongCyp2c8Inhibitor && selectedDrugIds.includes("selexipag")) {
@@ -2113,6 +2212,10 @@ function validateSelection(decision, input, selectedDrugIds) {
 
   if (selectedDrugIds.includes("riociguat") && input.systolicBp !== null && input.systolicBp < 95) {
     issues.push("Riociguat initiation caution: low systolic BP (<95 mmHg) increases hypotension risk.");
+  }
+
+  if (hasPde5 && input.systolicBp !== null && input.systolicBp < 90) {
+    issues.push("PDE5 inhibitor initiation caution: avoid starting PDE5 inhibitor therapy when systolic BP is <90 mmHg.");
   }
 
   if (selectedDrugIds.includes("treprostinil_oral") && input.hepaticImpairment === "severe") {
@@ -2904,7 +3007,7 @@ function handlePatientFormSubmit(form, formMessage) {
   clearFormMessage(formMessage);
   const input = parseInput(new FormData(form));
   window.__CURRENT_INPUT = input;
-  const decision = normalizeDecisionOutput(buildDecision(input));
+  const decision = normalizeDecisionOutput(applyContextToSelectionTargets(buildDecision(input), input));
   renderDecision(decision);
 }
 
