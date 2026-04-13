@@ -233,17 +233,30 @@ var DRUGS = {
     hepatic: "Liver disease complicates coagulation management; individualize.",
     pregnancy: "Pregnancy management differs and requires specialist obstetric/cardiopulmonary plan."
   },
-  doac_cteph: {
-    id: "doac_cteph",
-    name: "DOAC (CTEPH anticoagulation option)",
+  apixaban_cteph: {
+    id: "apixaban_cteph",
+    name: "Apixaban (CTEPH DOAC option)",
     classId: "anticoagulation",
     route: "PO",
-    startDose: "Agent-specific",
-    goalDose: "Maintain therapeutic anticoagulation indefinitely",
-    monitoring: "Bleeding, renal function, peri-procedural timing, adherence.",
-    interactions: "Agent-specific CYP/P-gp interactions.",
-    renal: "Dose and eligibility are renal-function dependent.",
-    hepatic: "Use caution or avoid in advanced hepatic disease depending on agent.",
+    startDose: "10 mg twice daily for 7 days, then 5 mg twice daily",
+    goalDose: "Continue 5 mg twice daily for treatment; 2.5 mg twice daily after >=6 months is a label option for recurrent VTE reduction, but long-term CTEPH intensity should be specialist-directed",
+    monitoring: "Bleeding, renal/hepatic function, peri-procedural timing, adherence.",
+    interactions: "Strong dual CYP3A4 and P-gp inhibitors/inducers can substantially alter exposure.",
+    renal: "No standard VTE-treatment dose reduction based only on renal function, but data are limited in advanced renal failure/dialysis; use specialist judgment.",
+    hepatic: "Avoid in severe hepatic impairment; use caution in milder liver disease with bleeding risk.",
+    pregnancy: "Avoid in pregnancy unless specialist-directed."
+  },
+  rivaroxaban_cteph: {
+    id: "rivaroxaban_cteph",
+    name: "Rivaroxaban (CTEPH DOAC option)",
+    classId: "anticoagulation",
+    route: "PO",
+    startDose: "15 mg twice daily with food for 21 days, then 20 mg once daily with food",
+    goalDose: "Continue 20 mg once daily with food for treatment; 10 mg once daily after >=6 months is a label option for recurrent VTE reduction, but long-term CTEPH intensity should be specialist-directed",
+    monitoring: "Bleeding, renal/hepatic function, peri-procedural timing, adherence, and food adherence for 15 mg/20 mg dosing.",
+    interactions: "Strong combined CYP3A4 and P-gp inhibitors/inducers can substantially alter exposure.",
+    renal: "Avoid if CrCl <15 mL/min; use added caution as renal function worsens.",
+    hepatic: "Avoid in moderate or severe hepatic impairment associated with coagulopathy.",
     pregnancy: "Avoid in pregnancy unless specialist-directed."
   },
   ccb_vasoreactive: {
@@ -323,6 +336,21 @@ var IMPORTANT_CITATIONS = [
     id: "chest_2019",
     label: "2019 CHEST guideline update for therapy of pulmonary arterial hypertension in adults",
     href: "https://www.sciencedirect.com/science/article/pii/S0012369219300029"
+  },
+  {
+    id: "apixaban_label",
+    label: "Apixaban / Eliquis prescribing information (DailyMed)",
+    href: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=fec050b0-4f50-4f27-aec0-6f58ed6f7d44"
+  },
+  {
+    id: "rivaroxaban_label",
+    label: "Rivaroxaban / Xarelto prescribing information (DailyMed)",
+    href: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=10db92f9-2300-4a80-836b-673e1ae91610"
+  },
+  {
+    id: "nejm_apixaban_rivaroxaban_vte_2026",
+    label: "2026 NEJM trial: apixaban vs rivaroxaban for acute venous thromboembolism",
+    href: "https://www.nejm.org/doi/full/10.1056/NEJMoa2510703"
   }
 ];
 
@@ -1758,12 +1786,13 @@ function buildDecision(input) {
       buildSelectionTarget(
         "cteph_anticoag",
         "CTEPH anticoagulation strategy",
-        "Select one preferred anticoagulation pathway.",
-        ["warfarin_cteph", "doac_cteph"],
+        "Select one anticoagulation pathway. If choosing a DOAC, choose either apixaban or rivaroxaban, not both. Apixaban may be preferred in many circumstances because acute-VTE data suggest less bleeding than rivaroxaban; that preference is extrapolated to CTEPH rather than proven in a CTEPH-specific trial.",
+        ["warfarin_cteph", "apixaban_cteph", "rivaroxaban_cteph"],
         1,
         1
       )
     );
+    decision.rationale.push("If a DOAC is chosen for CTEPH, apixaban may be preferred over rivaroxaban in many cases because acute-VTE randomized data suggest lower bleeding risk; this is an extrapolation and not CTEPH-specific randomized evidence.");
 
     if (operability === "not_assessed") {
       setPrimaryRecommendation(decision, "CTEPH pathway: determine operability at an expert center before choosing PTE, BPA, or riociguat.");

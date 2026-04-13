@@ -747,6 +747,18 @@ select:focus {
   color: var(--ink);
 }
 
+.contributors-drawer {
+  margin-top: 0.7rem;
+}
+
+.contributors-drawer summary {
+  display: inline-block;
+}
+
+.contributors-drawer .reference-list {
+  margin-top: 0.5rem;
+}
+
 @media (max-width: 1080px) {
   .layout {
     grid-template-columns: 1fr;

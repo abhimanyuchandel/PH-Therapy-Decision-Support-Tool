@@ -142,11 +142,12 @@
 
               <div class="quick-risk-field" data-models="reveal20_initial">
                 <span class="quick-risk-label">Age / sex</span>
-                <input type="hidden" name="maleOver60" />
+                <input type="hidden" name="maleOver60" value="no" />
                 <div class="segment-group" data-target="maleOver60">
-                  <button type="button" class="segment-btn" data-fill-target="maleOver60" data-fill-value="yes" data-category-value="yes">Male &gt;60 years of age</button>
+                  <button type="button" class="segment-btn" data-fill-target="maleOver60" data-fill-value="no" data-category-value="no">Female or &lt;60 years of age</button>
+                  <button type="button" class="segment-btn" data-fill-target="maleOver60" data-fill-value="yes" data-category-value="yes">Male and &gt;60 years of age</button>
                 </div>
-                <small class="input-help">If not selected, REVEAL assumes the patient is not a male older than 60 years.</small>
+                <small class="input-help">The lower-risk REVEAL age/sex category is selected by default; click the alternate box if the patient is a man older than 60 years.</small>
               </div>
 
               <div class="quick-risk-field" data-models="reveal20_initial,reveal_lite2_followup">
@@ -525,6 +526,9 @@
           <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11525349/" target="_blank" rel="noreferrer">2024 WSPH treatment algorithm for pulmonary arterial hypertension</a></li>
           <li><a href="https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=3bb9363e-b28d-4019-8aae-539233dca214" target="_blank" rel="noreferrer">Sildenafil / Revatio prescribing information (DailyMed)</a></li>
           <li><a href="https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=8444da17-6c31-492b-8842-93740f083d9d" target="_blank" rel="noreferrer">Bosentan prescribing information (DailyMed)</a></li>
+          <li><a href="https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=fec050b0-4f50-4f27-aec0-6f58ed6f7d44" target="_blank" rel="noreferrer">Apixaban / Eliquis prescribing information (DailyMed)</a></li>
+          <li><a href="https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=10db92f9-2300-4a80-836b-673e1ae91610" target="_blank" rel="noreferrer">Rivaroxaban / Xarelto prescribing information (DailyMed)</a></li>
+          <li><a href="https://www.nejm.org/doi/full/10.1056/NEJMoa2510703" target="_blank" rel="noreferrer">2026 NEJM trial: apixaban vs rivaroxaban for acute venous thromboembolism</a></li>
           <li><a href="https://www.sciencedirect.com/science/article/pii/S0012369219300029" target="_blank" rel="noreferrer">2019 CHEST guideline update for therapy of pulmonary arterial hypertension in adults</a></li>
           <li><a href="https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/761363s008lbl.pdf" target="_blank" rel="noreferrer">Sotatercept / Winrevair FDA label (2025 update)</a></li>
           <li><a href="https://www.lung.org/getmedia/b613ee8b-c808-4646-9608-459499185602/PH-Guidelines_Nov2024.pdf" target="_blank" rel="noreferrer">American Lung Association / PHA guidance-to-guidelines document (Nov 2024)</a></li>
@@ -537,6 +541,16 @@
 
   <footer class="app-meta" aria-label="Application metadata">
     <p><strong>Last updated:</strong> <span id="app-last-updated"></span></p>
+    <details class="references-drawer contributors-drawer">
+      <summary>Important contributors</summary>
+      <ul class="reference-list">
+        <li>Christopher Thomas, MD</li>
+        <li>Oksana Shlobin, MD</li>
+        <li>Vikramkit Khangoora, MD</li>
+        <li>Christopher S. King, MD</li>
+        <li>Steven D. Nathan, MD</li>
+      </ul>
+    </details>
   </footer>
 
   <script>
