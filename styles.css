@@ -751,6 +751,10 @@ select:focus {
   margin-top: 0.7rem;
 }
 
+.hero .contributors-drawer {
+  max-width: 72ch;
+}
+
 .contributors-drawer summary {
   display: inline-block;
 }
