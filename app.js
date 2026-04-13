@@ -2552,7 +2552,6 @@ function clearDecisionOutput() {
     "risk-transparency",
     "recommendation-rationale",
     "copyable-summary",
-    "decision-citations",
     "medication-selector",
     "regimen-validation",
     "medication-details"
@@ -2776,17 +2775,6 @@ function buildKeyValueTableHtml(rows, title) {
         </tbody>
       </table>
     </div>
-  `;
-}
-
-function buildCitationLinksHtml() {
-  return `
-    <strong>Key Citations</strong>
-    <ul class="citation-list">
-      ${IMPORTANT_CITATIONS.map((citation) => `
-        <li><a href="${escapeHtml(citation.href)}" target="_blank" rel="noreferrer">${escapeHtml(citation.label)}</a></li>
-      `).join("")}
-    </ul>
   `;
 }
 
@@ -3082,7 +3070,6 @@ function renderDecision(decision) {
   const transparencyEl = document.getElementById("risk-transparency");
   const rationaleEl = document.getElementById("recommendation-rationale");
   const copySummaryEl = document.getElementById("copyable-summary");
-  const citationsEl = document.getElementById("decision-citations");
   const selectorEl = document.getElementById("medication-selector");
   const validationEl = document.getElementById("regimen-validation");
   const detailsEl = document.getElementById("medication-details");
@@ -3156,7 +3143,6 @@ function renderDecision(decision) {
     ? `<strong>Rationale</strong><ul>${decision.rationale.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
     : "";
   renderCopyableSummary(copySummaryEl, decision, window.__CURRENT_INPUT, []);
-  citationsEl.innerHTML = buildCitationLinksHtml();
 
   validationEl.innerHTML = "";
   detailsEl.innerHTML = "";

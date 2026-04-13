@@ -665,15 +665,6 @@ select.input-range-flag {
   background: #eff9f9;
 }
 
-.guardrails ul {
-  padding-left: 1.1rem;
-  margin-top: 0.4rem;
-}
-
-.guardrails li {
-  margin-bottom: 0.45rem;
-}
-
 .disclaimer {
   margin-top: 0.85rem;
   font-size: 0.86rem;
@@ -898,7 +889,7 @@ select.input-range-flag {
         with score-driven recommendations and medication-level safety context.
       </p>
       <details class="references-drawer contributors-drawer">
-        <summary>Important contributors</summary>
+        <summary>Contributors</summary>
         <ul class="reference-list">
           <li>Abhimanyu Chandel, MD MAS</li>
           <li>Christopher Thomas, MD</li>
@@ -1358,19 +1349,6 @@ select.input-range-flag {
       </form>
     </section>
 
-    <section class="panel guardrails">
-      <h2>Embedded Guardrails</h2>
-      <ul>
-        <li>Blocks or flags guideline-discordant PAH therapy use in Group 2 and most Group 3 scenarios.</li>
-        <li>Flags high-risk contraindications (for example riociguat + PDE5 inhibitor; nitrates with PDE5/riociguat).</li>
-        <li>Highlights pregnancy-related restrictions for ERAs and riociguat.</li>
-        <li>Surfaces dose, route, titration, monitoring, and organ-function considerations for selected drugs.</li>
-      </ul>
-      <p class="disclaimer">
-        For clinician decision support only. Final prescribing decisions must use current product labeling,
-        local protocol, and specialist judgment.
-      </p>
-    </section>
     </div>
 
     <div class="column-stack column-secondary">
@@ -1399,7 +1377,6 @@ select.input-range-flag {
         <div id="regimen-validation" class="result-block"></div>
         <div id="medication-details" class="result-block"></div>
         <div id="copyable-summary" class="result-block"></div>
-        <div id="decision-citations" class="result-block"></div>
       </div>
     </section>
 
@@ -1429,6 +1406,10 @@ select.input-range-flag {
 
   <footer class="app-meta" aria-label="Application metadata">
     <p><strong>Last updated:</strong> <span id="app-last-updated"></span></p>
+    <p class="disclaimer">
+      For clinician decision support only. Final prescribing decisions must use current product labeling,
+      local protocol, and specialist judgment.
+    </p>
   </footer>
 
 <script>
@@ -3986,7 +3967,6 @@ function clearDecisionOutput() {
     "risk-transparency",
     "recommendation-rationale",
     "copyable-summary",
-    "decision-citations",
     "medication-selector",
     "regimen-validation",
     "medication-details"
@@ -4210,17 +4190,6 @@ function buildKeyValueTableHtml(rows, title) {
         </tbody>
       </table>
     </div>
-  `;
-}
-
-function buildCitationLinksHtml() {
-  return `
-    <strong>Key Citations</strong>
-    <ul class="citation-list">
-      ${IMPORTANT_CITATIONS.map((citation) => `
-        <li><a href="${escapeHtml(citation.href)}" target="_blank" rel="noreferrer">${escapeHtml(citation.label)}</a></li>
-      `).join("")}
-    </ul>
   `;
 }
 
@@ -4516,7 +4485,6 @@ function renderDecision(decision) {
   const transparencyEl = document.getElementById("risk-transparency");
   const rationaleEl = document.getElementById("recommendation-rationale");
   const copySummaryEl = document.getElementById("copyable-summary");
-  const citationsEl = document.getElementById("decision-citations");
   const selectorEl = document.getElementById("medication-selector");
   const validationEl = document.getElementById("regimen-validation");
   const detailsEl = document.getElementById("medication-details");
@@ -4590,7 +4558,6 @@ function renderDecision(decision) {
     ? `<strong>Rationale</strong><ul>${decision.rationale.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
     : "";
   renderCopyableSummary(copySummaryEl, decision, window.__CURRENT_INPUT, []);
-  citationsEl.innerHTML = buildCitationLinksHtml();
 
   validationEl.innerHTML = "";
   detailsEl.innerHTML = "";

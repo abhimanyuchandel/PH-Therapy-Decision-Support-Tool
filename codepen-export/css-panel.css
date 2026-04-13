@@ -664,15 +664,6 @@ select.input-range-flag {
   background: #eff9f9;
 }
 
-.guardrails ul {
-  padding-left: 1.1rem;
-  margin-top: 0.4rem;
-}
-
-.guardrails li {
-  margin-bottom: 0.45rem;
-}
-
 .disclaimer {
   margin-top: 0.85rem;
   font-size: 0.86rem;

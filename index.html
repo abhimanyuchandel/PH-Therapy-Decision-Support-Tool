@@ -22,7 +22,7 @@
         with score-driven recommendations and medication-level safety context.
       </p>
       <details class="references-drawer contributors-drawer">
-        <summary>Important contributors</summary>
+        <summary>Contributors</summary>
         <ul class="reference-list">
           <li>Abhimanyu Chandel, MD MAS</li>
           <li>Christopher Thomas, MD</li>
@@ -482,19 +482,6 @@
       </form>
     </section>
 
-    <section class="panel guardrails">
-      <h2>Embedded Guardrails</h2>
-      <ul>
-        <li>Blocks or flags guideline-discordant PAH therapy use in Group 2 and most Group 3 scenarios.</li>
-        <li>Flags high-risk contraindications (for example riociguat + PDE5 inhibitor; nitrates with PDE5/riociguat).</li>
-        <li>Highlights pregnancy-related restrictions for ERAs and riociguat.</li>
-        <li>Surfaces dose, route, titration, monitoring, and organ-function considerations for selected drugs.</li>
-      </ul>
-      <p class="disclaimer">
-        For clinician decision support only. Final prescribing decisions must use current product labeling,
-        local protocol, and specialist judgment.
-      </p>
-    </section>
     </div>
 
     <div class="column-stack column-secondary">
@@ -523,7 +510,6 @@
         <div id="regimen-validation" class="result-block"></div>
         <div id="medication-details" class="result-block"></div>
         <div id="copyable-summary" class="result-block"></div>
-        <div id="decision-citations" class="result-block"></div>
       </div>
     </section>
 
@@ -553,6 +539,10 @@
 
   <footer class="app-meta" aria-label="Application metadata">
     <p><strong>Last updated:</strong> <span id="app-last-updated"></span></p>
+    <p class="disclaimer">
+      For clinician decision support only. Final prescribing decisions must use current product labeling,
+      local protocol, and specialist judgment.
+    </p>
   </footer>
 
   <script>
